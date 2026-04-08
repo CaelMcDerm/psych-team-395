@@ -425,8 +425,8 @@ const Simulation = (() => {
       w, h,
       humanX: w * 0.18, humanY: h * 0.55,
       animalX: w * 0.42, animalY: h * 0.62,
-      // Target sits to the right; distance scaled by control.
-      targetBaseX: w * 0.55, targetMaxX: w * 0.92,
+      // Target travels from just past the human to the far right edge.
+      targetBaseX: w * 0.24, targetMaxX: w * 0.96,
       targetY: h * 0.30,
     };
   }
@@ -579,10 +579,8 @@ const Simulation = (() => {
     ctx.fillText(`Phase: ${pop.phase}`, cxp + 90, cyp + 56);
 
     // Footer status line
-    const cv = AppState.getState(currentKey).controls;
-    const reared = cv.handReared >= 0.5 ? "Hand-reared • identical conditions" : "Standard rearing";
     ctx.font = "12px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
-    ctx.fillText(`${pop.species === "dogs" ? "Dog" : "Wolf"} • ${reared}`, 14, h - 20);
+    ctx.fillText(`${pop.species === "dogs" ? "Dog" : "Wolf"} • Hand-reared, identical conditions`, 14, h - 20);
 
     if (pop.resultTmr > 0) {
       const al = Math.min(pop.resultTmr / 30, 1);
@@ -670,7 +668,7 @@ const Simulation = (() => {
     // Draw human gaze cone (only during cue + response phases, with strength from slider)
     if (pop.phase === "cue" || pop.phase === "response") {
       const dist = Math.hypot(tx - humanHeadX, ty - humanHeadY) + 30;
-      drawGazeCone(humanHeadX, humanHeadY, pop.humanAngle, dist, cv.cueStrength, "#ef9f27");
+      drawGazeCone(humanHeadX, humanHeadY, pop.humanAngle, dist, 0.7, "#ef9f27");
     }
 
     // Draw human and animal
