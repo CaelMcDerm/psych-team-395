@@ -12,32 +12,37 @@ CLOUD_MODEL = "claude-sonnet-4-20250514"
 
 # Local config (e.g. Ollama)
 LOCAL_API_URL = os.getenv("LOCAL_API_URL", "http://localhost:11434/api/chat")
-LOCAL_MODEL = os.getenv("LOCAL_MODEL", "qwen3-vl:8b")
+LOCAL_MODEL = os.getenv("LOCAL_MODEL", "gemma3:4b")
 
-# Topic definitions
-TOPICS = [
+# Species groups — each group is a top-level tab
+SPECIES_GROUPS = [
     {
-        "id": "topic_1",
-        "label": "Pendulum",
-        "description": "Explore the dynamics of a simple pendulum. Adjust length, gravity, and damping to observe changes in oscillation.",
-        "system_prompt": "You are a physics tutor helping the user understand pendulum dynamics. The user is interacting with a pendulum simulation where they can adjust length, gravity, and damping. Give concise, helpful explanations."
-    },
-    {
-        "id": "topic_2",
-        "label": "Wave Interference",
-        "description": "Visualize the superposition of two sinusoidal waves. Control frequency, amplitude, and phase offset.",
-        "system_prompt": "You are a physics tutor helping the user understand wave interference and superposition. The user is interacting with a wave simulation where they can adjust frequency, amplitude, and phase. Give concise, helpful explanations."
-    },
-    {
-        "id": "topic_3",
-        "label": "Projectile Motion",
-        "description": "Simulate projectile trajectories under gravity. Adjust launch angle, initial velocity, and air resistance.",
-        "system_prompt": "You are a physics tutor helping the user understand projectile motion. The user is interacting with a projectile simulation where they can adjust angle, velocity, and air resistance. Give concise, helpful explanations."
-    },
-    {
-        "id": "topic_4",
-        "label": "Spring-Mass System",
-        "description": "Model a spring-mass oscillator. Control spring constant, mass, and initial displacement.",
-        "system_prompt": "You are a physics tutor helping the user understand spring-mass harmonic oscillation. The user is interacting with a spring-mass simulation where they can adjust spring constant, mass, and displacement. Give concise, helpful explanations."
+        "id": "chimps_bonobos",
+        "label": "Chimpanzees & Bonobos",
+        "species": [
+            {"id": "chimpanzees", "label": "Chimpanzees"},
+            {"id": "bonobos", "label": "Bonobos"},
+        ],
+        "topics": [
+            {"id": "aggression", "label": "Aggression"},
+        ],
     },
 ]
+
+# Per "group:topic:species" system prompts
+SYSTEM_PROMPTS = {
+    "chimps_bonobos:aggression:chimpanzees": (
+        "You are an evolutionary biology tutor helping the user understand chimpanzee social dynamics "
+        "and the evolution of aggression. The user is interacting with an agent-based simulation of a "
+        "chimpanzee troop where males compete aggressively for status and mating access. More aggressive "
+        "males win more confrontations and gain higher reproductive fitness, driving mean aggression upward "
+        "over generations. Give concise, helpful explanations grounded in primatology and evolutionary theory."
+    ),
+    "chimps_bonobos:aggression:bonobos": (
+        "You are an evolutionary biology tutor helping the user understand bonobo social dynamics and how "
+        "female mate choice reduces aggression. The user is interacting with an agent-based simulation of a "
+        "bonobo group where females form coalitions and collectively reject aggressive males. Only low-aggression "
+        "males are accepted as mates, reversing the selection pressure seen in chimpanzees. Give concise, helpful "
+        "explanations grounded in primatology and evolutionary theory."
+    ),
+}

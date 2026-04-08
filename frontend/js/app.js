@@ -1,31 +1,37 @@
 /**
- * Boot: fetch topics, render tabs, wire up switching.
+ * Boot: build tabs (groups), sub-nav (topic pills + species toggle), wire switching.
  */
 (async function boot() {
-  // Fetch topics from backend
-  let topics;
+  let groups;
   try {
-    const resp = await fetch("/api/topics");
-    topics = await resp.json();
+    const resp = await fetch("/api/groups");
+    groups = await resp.json();
   } catch {
-    // Fallback if backend isn't running
-    topics = [
-      { id: "topic_1", label: "Pendulum", description: "" },
-      { id: "topic_2", label: "Wave Interference", description: "" },
-      { id: "topic_3", label: "Projectile Motion", description: "" },
-      { id: "topic_4", label: "Spring-Mass System", description: "" },
+    // Fallback when backend isn't running
+    groups = [
+      {
+        id: "chimps_bonobos",
+        label: "Chimpanzees & Bonobos",
+        species: [
+          { id: "chimpanzees", label: "Chimpanzees" },
+          { id: "bonobos", label: "Bonobos" },
+        ],
+        topics: [
+          { id: "aggression", label: "Aggression" },
+        ],
+      },
     ];
   }
-  AppState.topics = topics;
+  AppState.groups = groups;
 
-  // Render tab bar
+  // Render group tabs
   const tabBar = document.getElementById("tab-bar");
-  topics.forEach(topic => {
+  groups.forEach(group => {
     const tab = document.createElement("div");
     tab.className = "tab";
-    tab.dataset.topicId = topic.id;
-    tab.textContent = topic.label;
-    tab.addEventListener("click", () => switchTopic(topic.id));
+    tab.dataset.groupId = group.id;
+    tab.textContent = group.label;
+    tab.addEventListener("click", () => switchGroup(group.id));
     tabBar.appendChild(tab);
   });
 
@@ -33,28 +39,114 @@
   Simulation.init();
   Chat.init();
 
-  // Activate first topic
-  switchTopic(topics[0].id);
+  // Activate first group
+  switchGroup(groups[0].id);
 })();
 
-function switchTopic(topicId) {
-  if (AppState.activeTopic === topicId) return;
-  AppState.activeTopic = topicId;
+/** Switch the top-level group tab */
+function switchGroup(groupId) {
+  const group = AppState.groups.find(g => g.id === groupId);
+  if (!group) return;
 
-  // Update tabs
-  document.querySelectorAll(".tab").forEach(tab => {
-    tab.classList.toggle("active", tab.dataset.topicId === topicId);
+  AppState.activeGroup = groupId;
+
+  // Highlight active tab
+  document.querySelectorAll("#tab-bar .tab").forEach(tab => {
+    tab.classList.toggle("active", tab.dataset.groupId === groupId);
   });
 
-  // Update control panel
-  ControlPanel.render(topicId);
+  // Render topic pills
+  renderTopicPills(group);
 
-  // Update info panel
-  document.getElementById("info-content").innerHTML = AppState.getInfoText(topicId);
+  // Render species toggle
+  renderSpeciesToggle(group);
 
-  // Swap simulation
-  Simulation.start(topicId);
+  // Activate first topic + first species
+  AppState.activeTopic = group.topics[0].id;
+  AppState.activeSpecies = group.species[0].id;
+  highlightTopicPill(group.topics[0].id);
+  highlightSpeciesBtn(group.species[0].id);
+  activateCurrent();
+}
 
-  // Swap chat history
-  Chat.renderHistory(topicId);
+/** Switch the topic within the current group */
+function switchTopic(topicId) {
+  AppState.activeTopic = topicId;
+  highlightTopicPill(topicId);
+  activateCurrent();
+}
+
+/** Switch the species within the current group + topic */
+function switchSpecies(speciesId) {
+  AppState.activeSpecies = speciesId;
+  highlightSpeciesBtn(speciesId);
+  activateCurrent();
+}
+
+/** Refresh all panels for the current group:topic:species */
+function activateCurrent() {
+  const key = AppState.activeKey;
+  ControlPanel.render();
+  document.getElementById("info-content").innerHTML = AppState.getInfoText(key);
+  Simulation.start(key);
+  Chat.renderHistory();
+}
+
+// === Sub-nav rendering ===
+
+function renderTopicPills(group) {
+  const container = document.getElementById("topic-pills");
+  container.innerHTML = "";
+
+  // Label
+  const label = document.createElement("span");
+  label.className = "sub-nav-label";
+  label.textContent = "Topic";
+  container.appendChild(label);
+
+  group.topics.forEach(topic => {
+    const pill = document.createElement("button");
+    pill.className = "topic-pill";
+    pill.dataset.topicId = topic.id;
+    pill.textContent = topic.label;
+    pill.addEventListener("click", () => switchTopic(topic.id));
+    container.appendChild(pill);
+  });
+}
+
+function renderSpeciesToggle(group) {
+  const container = document.getElementById("species-toggle");
+  container.innerHTML = "";
+
+  // Label
+  const label = document.createElement("span");
+  label.className = "sub-nav-label";
+  label.textContent = "Species";
+  container.appendChild(label);
+
+  const toggleWrap = document.createElement("div");
+  toggleWrap.className = "species-toggle-wrap";
+
+  group.species.forEach(sp => {
+    const btn = document.createElement("button");
+    btn.className = "species-btn";
+    btn.dataset.speciesId = sp.id;
+    btn.textContent = sp.label;
+    btn.addEventListener("click", () => switchSpecies(sp.id));
+    toggleWrap.appendChild(btn);
+  });
+
+  container.appendChild(toggleWrap);
+}
+
+function highlightTopicPill(topicId) {
+  document.querySelectorAll(".topic-pill").forEach(p => {
+    p.classList.toggle("active", p.dataset.topicId === topicId);
+  });
+}
+
+function highlightSpeciesBtn(speciesId) {
+  document.querySelectorAll(".species-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.speciesId === speciesId);
+  });
 }

@@ -1,18 +1,18 @@
 /**
- * Chat accordion: expand/collapse, per-topic message history, send & reset.
+ * Chat accordion: expand/collapse, per-key message history, send & reset.
  */
 const Chat = (() => {
   let drawer, header, messagesEl, form, input, sendBtn, resetBtn;
   let sending = false;
 
   function init() {
-    drawer    = document.getElementById("chat-drawer");
-    header    = document.getElementById("chat-header");
+    drawer     = document.getElementById("chat-drawer");
+    header     = document.getElementById("chat-header");
     messagesEl = document.getElementById("chat-messages");
-    form      = document.getElementById("chat-form");
-    input     = document.getElementById("chat-input");
-    sendBtn   = document.getElementById("chat-send-btn");
-    resetBtn  = document.getElementById("chat-reset-btn");
+    form       = document.getElementById("chat-form");
+    input      = document.getElementById("chat-input");
+    sendBtn    = document.getElementById("chat-send-btn");
+    resetBtn   = document.getElementById("chat-reset-btn");
 
     header.addEventListener("click", toggle);
     form.addEventListener("submit", onSubmit);
@@ -20,13 +20,13 @@ const Chat = (() => {
   }
 
   function toggle(e) {
-    // Don't toggle when clicking the reset button
     if (e && e.target.id === "chat-reset-btn") return;
     drawer.classList.toggle("open");
   }
 
-  function renderHistory(topicId) {
-    const history = AppState.getChatHistory(topicId);
+  function renderHistory() {
+    const key = AppState.activeKey;
+    const history = AppState.getChatHistory(key);
     messagesEl.innerHTML = "";
     history.forEach(msg => appendBubble(msg.role, msg.content));
     messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -59,8 +59,8 @@ const Chat = (() => {
     const message = input.value.trim();
     if (!message || sending) return;
 
-    const topicId = AppState.activeTopic;
-    AppState.appendChat(topicId, "user", message);
+    const key = AppState.activeKey;
+    AppState.appendChat(key, "user", message);
     appendBubble("user", message);
     input.value = "";
     sending = true;
@@ -72,17 +72,21 @@ const Chat = (() => {
       const resp = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topicId, message }),
+        body: JSON.stringify({
+          groupId: AppState.activeGroup,
+          topicId: AppState.activeTopic,
+          speciesId: AppState.activeSpecies,
+          message,
+        }),
       });
       const data = await resp.json();
       removeTyping();
 
       if (resp.ok) {
-        AppState.appendChat(topicId, "assistant", data.reply);
+        AppState.appendChat(key, "assistant", data.reply);
         appendBubble("assistant", data.reply);
       } else {
-        const errMsg = data.error || "Failed to get response";
-        appendBubble("error", errMsg);
+        appendBubble("error", data.error || "Failed to get response");
       }
     } catch (err) {
       removeTyping();
@@ -96,19 +100,21 @@ const Chat = (() => {
 
   async function onReset(e) {
     e.stopPropagation();
-    const topicId = AppState.activeTopic;
-    AppState.clearChat(topicId);
+    const key = AppState.activeKey;
+    AppState.clearChat(key);
     messagesEl.innerHTML = "";
 
     try {
       await fetch("/api/chat/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topicId }),
+        body: JSON.stringify({
+          groupId: AppState.activeGroup,
+          topicId: AppState.activeTopic,
+          speciesId: AppState.activeSpecies,
+        }),
       });
-    } catch {
-      // Silently fail — local history is already cleared
-    }
+    } catch { /* local history already cleared */ }
   }
 
   return { init, toggle, renderHistory };

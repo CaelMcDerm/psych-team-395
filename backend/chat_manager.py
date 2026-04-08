@@ -1,27 +1,31 @@
-from config import TOPICS
+from config import SYSTEM_PROMPTS
 
-# In-memory sessions keyed by topic_id
+# In-memory sessions keyed by "group:topic:species"
 sessions: dict[str, list[dict]] = {}
 
-# Map topic_id -> system prompt
-_system_prompts = {t["id"]: t["system_prompt"] for t in TOPICS}
+
+def _key(group_id: str, topic_id: str, species_id: str) -> str:
+    return f"{group_id}:{topic_id}:{species_id}"
 
 
-def get_history(topic_id: str) -> list[dict]:
-    if topic_id not in sessions:
-        sessions[topic_id] = []
-    return sessions[topic_id]
+def get_history(group_id: str, topic_id: str, species_id: str) -> list[dict]:
+    k = _key(group_id, topic_id, species_id)
+    if k not in sessions:
+        sessions[k] = []
+    return sessions[k]
 
 
-def append(topic_id: str, role: str, content: str) -> list[dict]:
-    history = get_history(topic_id)
+def append(group_id: str, topic_id: str, species_id: str, role: str, content: str) -> list[dict]:
+    history = get_history(group_id, topic_id, species_id)
     history.append({"role": role, "content": content})
     return history
 
 
-def reset(topic_id: str) -> None:
-    sessions[topic_id] = []
+def reset(group_id: str, topic_id: str, species_id: str) -> None:
+    k = _key(group_id, topic_id, species_id)
+    sessions[k] = []
 
 
-def get_system_prompt(topic_id: str) -> str:
-    return _system_prompts.get(topic_id, "You are a helpful assistant.")
+def get_system_prompt(group_id: str, topic_id: str, species_id: str) -> str:
+    k = _key(group_id, topic_id, species_id)
+    return SYSTEM_PROMPTS.get(k, "You are a helpful assistant.")

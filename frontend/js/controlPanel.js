@@ -1,15 +1,16 @@
 /**
- * Control panel: renders sliders per topic, emits 'control-change' events.
+ * Control panel: renders sliders for the active group:topic:species, emits 'control-change' events.
  */
 const ControlPanel = (() => {
   const container = () => document.getElementById("controls-container");
   let debounceTimers = {};
 
-  function render(topicId) {
+  function render() {
     const el = container();
     el.innerHTML = "";
-    const configs = AppState.getControlConfigs(topicId);
-    const state = AppState.getState(topicId);
+    const key = AppState.activeKey;
+    const configs = AppState.getControlConfigs(key);
+    const state = AppState.getState(key);
 
     configs.forEach(cfg => {
       const item = document.createElement("div");
@@ -34,13 +35,12 @@ const ControlPanel = (() => {
       input.addEventListener("input", () => {
         const val = parseFloat(input.value);
         valueSpan.textContent = val;
-        AppState.setControl(topicId, cfg.key, val);
+        AppState.setControl(key, cfg.key, val);
 
-        // Debounced event dispatch
         clearTimeout(debounceTimers[cfg.key]);
         debounceTimers[cfg.key] = setTimeout(() => {
           window.dispatchEvent(new CustomEvent("control-change", {
-            detail: { topicId, key: cfg.key, value: val }
+            detail: { key, controlKey: cfg.key, value: val }
           }));
         }, 150);
       });
@@ -49,6 +49,15 @@ const ControlPanel = (() => {
       item.appendChild(input);
       el.appendChild(item);
     });
+
+    // Reset button
+    const resetBtn = document.createElement("button");
+    resetBtn.textContent = "Reset Simulation";
+    resetBtn.className = "sim-reset-btn";
+    resetBtn.addEventListener("click", () => {
+      if (window.resetSimulation) window.resetSimulation();
+    });
+    el.appendChild(resetBtn);
   }
 
   return { render };
