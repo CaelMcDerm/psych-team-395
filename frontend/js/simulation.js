@@ -61,11 +61,27 @@ const Simulation = (() => {
   function resetPop(key) {
     resize();
     const k = key || currentKey;
+    const [, topic, species] = k.split(":");
+
+    if (topic === "gaze_following") {
+      pops[k] = {
+        kind: "gaze",
+        species,
+        phase: "setup", phaseT: 0,
+        trial: 0, faceCount: 0, gazeCount: 0,
+        humanAngle: 0,        // current head angle of human
+        humanTargetAngle: 0,  // angle the human's head is animating toward
+        animalAngle: Math.PI, // animal initially faces left toward human
+        animalTargetAngle: Math.PI,
+        lastResult: null, resultTmr: 0,
+      };
+      return;
+    }
+
     const s = AppState.getState(k);
     const cv = s.controls;
     const w = cw(), h = ch();
     const half = Math.floor(cv.popSize / 2);
-    const species = k.split(":")[2]; // extract species from key
     const mean = species === "chimpanzees" ? 0.55 : 0.45;
     const agents = [];
     for (let i = 0; i < half; i++) agents.push(mkAgent(w, h, mean + (Math.random() - 0.5) * 0.4, "M"));
@@ -400,11 +416,296 @@ const Simulation = (() => {
     if (pop.frame % 300 === 0) nextGen(key, pop);
   }
 
+  // === Gaze-following behavioral sim (dogs vs wolves) ===
+
+  // Geometry helpers for the gaze scene.
+  function gazeScene() {
+    const w = cw(), h = ch();
+    return {
+      w, h,
+      humanX: w * 0.18, humanY: h * 0.55,
+      animalX: w * 0.42, animalY: h * 0.62,
+      // Target sits to the right; distance scaled by control.
+      targetBaseX: w * 0.55, targetMaxX: w * 0.92,
+      targetY: h * 0.30,
+    };
+  }
+
+  function lerpAngle(a, b, t) {
+    let d = b - a;
+    while (d > Math.PI) d -= 2 * Math.PI;
+    while (d < -Math.PI) d += 2 * Math.PI;
+    return a + d * t;
+  }
+
+  function drawHuman(x, y, headAngle) {
+    // Body
+    ctx.strokeStyle = "#c8ccd8"; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y + 4); ctx.lineTo(x, y + 42);            // torso
+    ctx.moveTo(x, y + 16); ctx.lineTo(x - 12, y + 32);      // left arm
+    ctx.moveTo(x, y + 16); ctx.lineTo(x + 12, y + 32);      // right arm
+    ctx.moveTo(x, y + 42); ctx.lineTo(x - 9, y + 64);       // left leg
+    ctx.moveTo(x, y + 42); ctx.lineTo(x + 9, y + 64);       // right leg
+    ctx.stroke();
+    // Head
+    ctx.beginPath(); ctx.arc(x, y - 8, 11, 0, Math.PI * 2);
+    ctx.fillStyle = "#e1e4ed"; ctx.fill();
+    // Eye direction marker (small dot at front of head)
+    const ex = x + Math.cos(headAngle) * 7;
+    const ey = y - 8 + Math.sin(headAngle) * 7;
+    ctx.beginPath(); ctx.arc(ex, ey, 2.2, 0, Math.PI * 2);
+    ctx.fillStyle = "#0f1117"; ctx.fill();
+    // Nose line
+    ctx.beginPath();
+    ctx.moveTo(x, y - 8);
+    ctx.lineTo(x + Math.cos(headAngle) * 13, y - 8 + Math.sin(headAngle) * 13);
+    ctx.strokeStyle = "#8b8fa3"; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+
+  function drawCanid(x, y, headAngle, species) {
+    const bodyCol = species === "dogs" ? "#d8b48a" : "#9aa1ad";
+    const outline = species === "dogs" ? "#8a6f4f" : "#5c6270";
+    // Body ellipse
+    ctx.beginPath();
+    ctx.ellipse(x, y, 18, 9, 0, 0, Math.PI * 2);
+    ctx.fillStyle = bodyCol; ctx.fill();
+    ctx.strokeStyle = outline; ctx.lineWidth = 1.5; ctx.stroke();
+    // Legs
+    ctx.beginPath();
+    ctx.moveTo(x - 11, y + 6); ctx.lineTo(x - 11, y + 16);
+    ctx.moveTo(x - 5, y + 8);  ctx.lineTo(x - 5, y + 17);
+    ctx.moveTo(x + 5, y + 8);  ctx.lineTo(x + 5, y + 17);
+    ctx.moveTo(x + 11, y + 6); ctx.lineTo(x + 11, y + 16);
+    ctx.stroke();
+    // Tail (wolves: straight, dogs: curled up)
+    ctx.beginPath();
+    if (species === "dogs") {
+      ctx.moveTo(x + 16, y - 1);
+      ctx.quadraticCurveTo(x + 24, y - 12, x + 18, y - 16);
+    } else {
+      ctx.moveTo(x + 16, y + 2);
+      ctx.lineTo(x + 28, y + 6);
+    }
+    ctx.stroke();
+    // Head — placed on the side of the body in the direction of headAngle
+    const hx = x + Math.cos(headAngle) * 16;
+    const hy = y + Math.sin(headAngle) * 6 - 2;
+    ctx.beginPath();
+    ctx.ellipse(hx, hy, 7, 5.5, headAngle, 0, Math.PI * 2);
+    ctx.fillStyle = bodyCol; ctx.fill(); ctx.stroke();
+    // Ears
+    ctx.beginPath();
+    ctx.moveTo(hx - Math.cos(headAngle) * 2, hy - 5);
+    ctx.lineTo(hx - Math.cos(headAngle) * 4, hy - 10);
+    ctx.lineTo(hx + 2, hy - 5);
+    ctx.fillStyle = outline; ctx.fill();
+    // Eye
+    const exd = hx + Math.cos(headAngle) * 5;
+    const eyd = hy + Math.sin(headAngle) * 5;
+    ctx.beginPath(); ctx.arc(exd, eyd, 1.6, 0, Math.PI * 2);
+    ctx.fillStyle = "#0f1117"; ctx.fill();
+  }
+
+  function drawTarget(tx, ty) {
+    // Cup / treat
+    ctx.beginPath();
+    ctx.moveTo(tx - 9, ty - 8);
+    ctx.lineTo(tx + 9, ty - 8);
+    ctx.lineTo(tx + 6, ty + 9);
+    ctx.lineTo(tx - 6, ty + 9);
+    ctx.closePath();
+    ctx.fillStyle = "#e24b4a"; ctx.fill();
+    ctx.strokeStyle = "#7a1f1f"; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+
+  function drawGazeCone(ox, oy, angle, length, opacity, color) {
+    const spread = 0.18;
+    const x1 = ox + Math.cos(angle - spread) * length;
+    const y1 = oy + Math.sin(angle - spread) * length;
+    const x2 = ox + Math.cos(angle + spread) * length;
+    const y2 = oy + Math.sin(angle + spread) * length;
+    const grad = ctx.createLinearGradient(ox, oy, (x1 + x2) / 2, (y1 + y2) / 2);
+    grad.addColorStop(0, color + Math.floor(opacity * 180).toString(16).padStart(2, "0"));
+    grad.addColorStop(1, color + "00");
+    ctx.beginPath();
+    ctx.moveTo(ox, oy);
+    ctx.lineTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.closePath();
+    ctx.fillStyle = grad; ctx.fill();
+  }
+
+  function drawGazeVector(ox, oy, angle, length, color) {
+    const x2 = ox + Math.cos(angle) * length;
+    const y2 = oy + Math.sin(angle) * length;
+    ctx.beginPath();
+    ctx.moveTo(ox, oy); ctx.lineTo(x2, y2);
+    ctx.strokeStyle = color; ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+    // Arrowhead
+    ctx.beginPath();
+    ctx.arc(x2, y2, 3, 0, Math.PI * 2);
+    ctx.fillStyle = color; ctx.fill();
+  }
+
+  function drawGazeOverlay(pop) {
+    const w = cw(), h = ch();
+    const cWidth = 200, cHeight = 78, cxp = w - cWidth - 14, cyp = h - cHeight - 40;
+    ctx.fillStyle = "rgba(15,17,23,0.88)";
+    ctx.fillRect(cxp - 8, cyp - 18, cWidth + 16, cHeight + 26);
+    ctx.strokeStyle = "rgba(42,45,58,0.8)"; ctx.lineWidth = 0.5;
+    ctx.strokeRect(cxp - 8, cyp - 18, cWidth + 16, cHeight + 26);
+    ctx.font = "10px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+    ctx.fillText("Attention bias / trials", cxp, cyp - 5);
+
+    const total = Math.max(pop.trial, 1);
+    const facePct = pop.faceCount / total;
+    const gazePct = pop.gazeCount / total;
+    const barW = cWidth - 80;
+
+    ctx.fillStyle = "#8b8fa3"; ctx.fillText("Face-fix", cxp, cyp + 14);
+    ctx.fillStyle = "#2a2d3a"; ctx.fillRect(cxp + 60, cyp + 6, barW, 10);
+    ctx.fillStyle = "#9FE1CB"; ctx.fillRect(cxp + 60, cyp + 6, barW * facePct, 10);
+    ctx.fillStyle = "#e1e4ed"; ctx.fillText(`${Math.round(facePct * 100)}%`, cxp + 62 + barW + 4, cyp + 14);
+
+    ctx.fillStyle = "#8b8fa3"; ctx.fillText("Gaze-foll", cxp, cyp + 34);
+    ctx.fillStyle = "#2a2d3a"; ctx.fillRect(cxp + 60, cyp + 26, barW, 10);
+    ctx.fillStyle = "#ef9f27"; ctx.fillRect(cxp + 60, cyp + 26, barW * gazePct, 10);
+    ctx.fillStyle = "#e1e4ed"; ctx.fillText(`${Math.round(gazePct * 100)}%`, cxp + 62 + barW + 4, cyp + 34);
+
+    ctx.fillStyle = "#8b8fa3";
+    ctx.fillText(`Trials: ${pop.trial}`, cxp, cyp + 56);
+    ctx.fillText(`Phase: ${pop.phase}`, cxp + 90, cyp + 56);
+
+    // Footer status line
+    const cv = AppState.getState(currentKey).controls;
+    const reared = cv.handReared >= 0.5 ? "Hand-reared • identical conditions" : "Standard rearing";
+    ctx.font = "12px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+    ctx.fillText(`${pop.species === "dogs" ? "Dog" : "Wolf"} • ${reared}`, 14, h - 20);
+
+    if (pop.resultTmr > 0) {
+      const al = Math.min(pop.resultTmr / 30, 1);
+      ctx.font = "bold 14px 'JetBrains Mono', monospace";
+      ctx.fillStyle = `rgba(225,228,237,${al})`;
+      ctx.textAlign = "center";
+      ctx.fillText(pop.lastResult, w / 2, 32);
+      ctx.textAlign = "left";
+      pop.resultTmr--;
+    }
+  }
+
+  function drawGazeSim(dt, key) {
+    const pop = pops[key];
+    if (!pop) return;
+    const cv = AppState.getState(key).controls;
+    const sc = gazeScene();
+
+    // Background
+    ctx.fillStyle = "#0f1117"; ctx.fillRect(0, 0, sc.w, sc.h);
+
+    // Target position based on slider
+    const tx = sc.targetBaseX + (sc.targetMaxX - sc.targetBaseX) * cv.targetDistance;
+    const ty = sc.targetY;
+
+    // Angles to references
+    const humanHeadX = sc.humanX, humanHeadY = sc.humanY - 8;
+    const animalHeadX = sc.animalX + 16, animalHeadY = sc.animalY - 2;
+    const angHumanToTarget = Math.atan2(ty - humanHeadY, tx - humanHeadX);
+    const angAnimalToHuman = Math.atan2(humanHeadY - animalHeadY, humanHeadX - animalHeadX);
+    const angAnimalToTarget = Math.atan2(ty - animalHeadY, tx - animalHeadX);
+
+    // Trial state machine — phases scaled by trialSpeed
+    const speed = cv.trialSpeed;
+    pop.phaseT += dt * speed;
+
+    switch (pop.phase) {
+      case "setup":
+        pop.humanTargetAngle = 0;        // human looks forward
+        pop.animalTargetAngle = angAnimalToHuman; // animal faces human
+        if (pop.phaseT > 0.5) { pop.phase = "cue"; pop.phaseT = 0; }
+        break;
+      case "cue":
+        pop.humanTargetAngle = angHumanToTarget; // human turns to look at target
+        if (pop.phaseT > 1.5) { pop.phase = "response"; pop.phaseT = 0; }
+        break;
+      case "response":
+        if (pop.species === "dogs") {
+          // Face-fixation: animal locks onto human's face
+          pop.animalTargetAngle = angAnimalToHuman;
+          // occasional micro-glance toward target then back
+          if (pop.phaseT > 1.3 && pop.phaseT < 1.5) {
+            pop.animalTargetAngle = angAnimalToTarget;
+          }
+        } else {
+          // Wolf: follow gaze axis to distant target
+          pop.animalTargetAngle = angAnimalToTarget;
+        }
+        if (pop.phaseT > 3.0) {
+          pop.phase = "resolve"; pop.phaseT = 0;
+          pop.trial++;
+          if (pop.species === "dogs") {
+            pop.faceCount++;
+            pop.lastResult = "Dog looked at human face";
+          } else {
+            pop.gazeCount++;
+            pop.lastResult = "Wolf followed gaze to target";
+          }
+          pop.resultTmr = 60;
+        }
+        break;
+      case "resolve":
+        if (pop.phaseT > 1.0) { pop.phase = "setup"; pop.phaseT = 0; }
+        break;
+    }
+
+    // Smoothly animate angles
+    const easing = Math.min(1, dt * 6 * speed);
+    pop.humanAngle = lerpAngle(pop.humanAngle, pop.humanTargetAngle, easing);
+    pop.animalAngle = lerpAngle(pop.animalAngle, pop.animalTargetAngle, easing);
+
+    // Draw target
+    drawTarget(tx, ty);
+
+    // Draw human gaze cone (only during cue + response phases, with strength from slider)
+    if (pop.phase === "cue" || pop.phase === "response") {
+      const dist = Math.hypot(tx - humanHeadX, ty - humanHeadY) + 30;
+      drawGazeCone(humanHeadX, humanHeadY, pop.humanAngle, dist, cv.cueStrength, "#ef9f27");
+    }
+
+    // Draw human and animal
+    drawHuman(sc.humanX, sc.humanY, pop.humanAngle);
+    drawCanid(sc.animalX, sc.animalY, pop.animalAngle, pop.species);
+
+    // Draw animal gaze vector (where it's actually looking)
+    if (pop.phase === "response" || pop.phase === "resolve") {
+      const ahx = sc.animalX + Math.cos(pop.animalAngle) * 16;
+      const ahy = sc.animalY + Math.sin(pop.animalAngle) * 6 - 2;
+      const vlen = pop.species === "dogs"
+        ? Math.hypot(humanHeadX - ahx, humanHeadY - ahy)
+        : Math.hypot(tx - ahx, ty - ahy);
+      drawGazeVector(ahx, ahy, pop.animalAngle, vlen, "#9FE1CB");
+    }
+
+    // Indicator on human face when dog is fixating (during response phase)
+    if (pop.species === "dogs" && (pop.phase === "response" || pop.phase === "resolve")) {
+      const pulse = 0.5 + 0.5 * Math.sin(pop.phaseT * 6);
+      ctx.beginPath();
+      ctx.arc(humanHeadX, humanHeadY, 14 + pulse * 3, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(159,225,203,${0.3 + pulse * 0.4})`;
+      ctx.lineWidth = 1.5; ctx.stroke();
+    }
+
+    drawGazeOverlay(pop);
+  }
+
   // Renderer registry — maps key patterns to render functions.
   // Uses exact match first, then pattern match on "group:topic:*".
   const renderers = {
     "chimps_bonobos:aggression:chimpanzees": drawAggressionSim,
     "chimps_bonobos:aggression:bonobos": drawAggressionSim,
+    "dogs_wolves:gaze_following:dogs": drawGazeSim,
+    "dogs_wolves:gaze_following:wolves": drawGazeSim,
   };
 
   function getRenderer(key) {

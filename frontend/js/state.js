@@ -25,6 +25,18 @@ const AppState = (() => {
       { key: "mutRate",   label: "Mutation Rate",          min: 0.01, max: 0.15, step: 0.01, default: 0.05 },
       { key: "threshold", label: "Coalition Selectivity",  min: 0.2,  max: 0.8,  step: 0.05, default: 0.5 },
     ],
+    "dogs_wolves:gaze_following:dogs": [
+      { key: "cueStrength",    label: "Gaze Cue Strength",  min: 0.2, max: 1.0, step: 0.05, default: 0.6  },
+      { key: "targetDistance", label: "Target Distance",    min: 0.4, max: 1.0, step: 0.05, default: 0.75 },
+      { key: "trialSpeed",     label: "Trial Speed",        min: 0.5, max: 2.0, step: 0.1,  default: 1.0  },
+      { key: "handReared",     label: "Hand-reared",        min: 0,   max: 1,   step: 1,    default: 1    },
+    ],
+    "dogs_wolves:gaze_following:wolves": [
+      { key: "cueStrength",    label: "Gaze Cue Strength",  min: 0.2, max: 1.0, step: 0.05, default: 0.6  },
+      { key: "targetDistance", label: "Target Distance",    min: 0.4, max: 1.0, step: 0.05, default: 0.75 },
+      { key: "trialSpeed",     label: "Trial Speed",        min: 0.5, max: 2.0, step: 0.1,  default: 1.0  },
+      { key: "handReared",     label: "Hand-reared",        min: 0,   max: 1,   step: 1,    default: 1    },
+    ],
   };
 
   // Info text keyed by "group:topic:species"
@@ -50,6 +62,27 @@ const AppState = (() => {
   <div class="legend-row"><span class="dot ring"></span> Male (ring)</div>
   <div class="legend-row"><span class="dot" style="background:#8b8fa3"></span> Female (solid)</div>
 </div>`,
+
+    "dogs_wolves:gaze_following:dogs": `<p><strong>Dogs</strong> show <em>face-fixation</em>. When a human gives a gaze cue toward a distant object, dogs orient to the <strong>human's face</strong> rather than following the gaze into distant space.</p>
+<p>This is not a learned behavior. Hand-reared dogs and wolves raised under identical conditions still differ — face-gazing appears to be a <strong>genetic predisposition</strong> in dogs, the result of domestication producing a specific attentional bias toward human faces.</p>
+<p>Watch the dog's gaze vector lock onto the human's head, even when the cue points elsewhere. Try lowering <em>Gaze Cue Strength</em> ("minimally communicative") — the bias persists.</p>
+<p>The <em>Hand-reared</em> toggle is a label only: it does not change behavior, illustrating that identical rearing does not equalize the species.</p>
+<div class="legend-block">
+  <div class="legend-row"><span class="dot" style="background:#9FE1CB"></span> Dog gaze vector</div>
+  <div class="legend-row"><span class="dot" style="background:#ef9f27"></span> Human gaze cone</div>
+  <div class="legend-row"><span class="dot" style="background:#e24b4a"></span> Target object</div>
+</div>
+<p class="citation"><small>Miklósi, Á., Kubinyi, E., Topál, J., Gácsi, M., Virányi, Z., &amp; Csányi, V. (2003). A simple reason for a big difference: Wolves do not look back at humans, but dogs do. <em>Current Biology, 13</em>(9), 763–766.</small></p>`,
+
+    "dogs_wolves:gaze_following:wolves": `<p><strong>Wolves</strong> follow human gaze into distant space. When a human looks toward a distant target, wolves orient their attention along the gaze axis — they do <em>not</em> fixate on the human's face.</p>
+<p>This holds even for pack-raised wolves under identical conditions to dogs. The dog/wolf contrast suggests domestication produced a <strong>specific attentional bias</strong> in dogs (face-fixation) rather than a general improvement in human-gaze reading. Wolves are not worse at reading gaze; they read it differently.</p>
+<p>Watch the wolf's gaze vector align with the human's gaze cone and track outward to the target. Toggle <em>Hand-reared</em> on — the behavior is unchanged, because the difference is genetic, not learned.</p>
+<div class="legend-block">
+  <div class="legend-row"><span class="dot" style="background:#9FE1CB"></span> Wolf gaze vector</div>
+  <div class="legend-row"><span class="dot" style="background:#ef9f27"></span> Human gaze cone</div>
+  <div class="legend-row"><span class="dot" style="background:#e24b4a"></span> Target object</div>
+</div>
+<p class="citation"><small>Miklósi, Á., Kubinyi, E., Topál, J., Gácsi, M., Virányi, Z., &amp; Csányi, V. (2003). A simple reason for a big difference: Wolves do not look back at humans, but dogs do. <em>Current Biology, 13</em>(9), 763–766.</small></p>`,
   };
 
   function initState(key) {
