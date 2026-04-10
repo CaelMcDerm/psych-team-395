@@ -7,6 +7,13 @@ const Simulation = (() => {
   let animId = null;
   let currentKey = null;
   let lastTime = 0;
+
+  const happyImg = new Image();
+  happyImg.src = "/images/joyfulsoul.png";
+  const neutralImg = new Image();
+  neutralImg.src = "/images/gettingAngry.png";
+  const angryImg = new Image();
+  angryImg.src = "/images/anger.png";
   
   // Per-key population state
   const pops = {};
@@ -122,20 +129,6 @@ const Simulation = (() => {
   }
 
   function avg(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0; }
-
-  function aggCol(a) {
-    let r, g, b;
-    if (a < 0.5) {
-      r = Math.round(55 + (239 - 55) * a * 2);
-      g = Math.round(138 + (159 - 138) * a * 2);
-      b = Math.round(221 + (39 - 221) * a * 2);
-    } else {
-      r = Math.round(239 + (226 - 239) * (a - 0.5) * 2);
-      g = Math.round(159 + (75 - 159) * (a - 0.5) * 2);
-      b = Math.round(39 + (74 - 39) * (a - 0.5) * 2);
-    }
-    return `rgb(${r},${g},${b})`;
-  }
 
   // === Shared physics ===
 
@@ -337,12 +330,20 @@ const Simulation = (() => {
         ctx.moveTo(a.x - 6, a.y + 1); ctx.lineTo(a.x - 1, a.y + 6); ctx.lineTo(a.x + 7, a.y - 5);
     ctx.stroke();
       }
-      ctx.beginPath(); ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
-      ctx.fillStyle = aggCol(a.agg); ctx.fill();
+      const img = a.agg < 0.4 ? happyImg : a.agg < 0.7 ? neutralImg : angryImg;
+      const size = 28;
+      if (img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, a.x - size / 2, a.y - size / 2, size, size);
+      }
       if (a.sex === "M") {
         ctx.beginPath(); ctx.arc(a.x, a.y, a.r + 2.5, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(255,255,255,0.22)"; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 3; ctx.stroke();
       }
+      ctx.font = "bold 10px sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(a.sex === "M" ? "♂" : "♀", a.x, a.y + size / 2 + 7);
     });
   }
 
