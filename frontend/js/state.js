@@ -7,7 +7,8 @@ const AppState = (() => {
   let activeTopic = null;
   let activeSpecies = null;
   let groups = [];
-  const store = {}; // "group:topic:species" -> {controls, chatHistory, simState}
+  const store = {}; // "group:topic:species" -> {controls, simState}
+  const chatStore = {}; // "group:topic" -> [{role, content}]
 
   function stateKey(g, t, s) {
     return `${g || activeGroup}:${t || activeTopic}:${s || activeSpecies}`;
@@ -85,7 +86,7 @@ const AppState = (() => {
     const cfg = controlConfigs[key] || [];
     const controls = {};
     cfg.forEach(c => { controls[c.key] = c.default; });
-    store[key] = { controls, chatHistory: [], simState: {} };
+    store[key] = { controls, simState: {} };
   }
 
   return {
@@ -100,6 +101,9 @@ const AppState = (() => {
 
     /** Current composite key */
     get activeKey() { return stateKey(); },
+
+    /** Chat key (shared across species within a topic) */
+    get chatKey() { return `${activeGroup}:${activeTopic}`; },
 
     getControlConfigs(key) { return controlConfigs[key || stateKey()] || []; },
     getInfoText(key) { return infoTexts[key || stateKey()] || "<p>No information available.</p>"; },
@@ -117,21 +121,17 @@ const AppState = (() => {
     },
 
     getChatHistory(key) {
-      const k = key || stateKey();
-      initState(k);
-      return store[k].chatHistory;
+      if (!chatStore[key]) chatStore[key] = [];
+      return chatStore[key];
     },
 
     appendChat(key, role, content) {
-      const k = key || stateKey();
-      initState(k);
-      store[k].chatHistory.push({ role, content });
+      if (!chatStore[key]) chatStore[key] = [];
+      chatStore[key].push({ role, content });
     },
 
     clearChat(key) {
-      const k = key || stateKey();
-      initState(k);
-      store[k].chatHistory = [];
+      chatStore[key] = [];
     },
   };
 })();

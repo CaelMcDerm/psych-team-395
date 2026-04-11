@@ -25,7 +25,7 @@ const Chat = (() => {
   }
 
   function renderHistory() {
-    const key = AppState.activeKey;
+    const key = AppState.chatKey;
     const history = AppState.getChatHistory(key);
     messagesEl.innerHTML = "";
     history.forEach(msg => appendBubble(msg.role, msg.content));
@@ -59,7 +59,7 @@ const Chat = (() => {
     const message = input.value.trim();
     if (!message || sending) return;
 
-    const key = AppState.activeKey;
+    const key = AppState.chatKey;
     AppState.appendChat(key, "user", message);
     appendBubble("user", message);
     input.value = "";
@@ -75,7 +75,6 @@ const Chat = (() => {
         body: JSON.stringify({
           groupId: AppState.activeGroup,
           topicId: AppState.activeTopic,
-          speciesId: AppState.activeSpecies,
           message,
         }),
       });
@@ -100,7 +99,7 @@ const Chat = (() => {
 
   async function onReset(e) {
     e.stopPropagation();
-    const key = AppState.activeKey;
+    const key = AppState.chatKey;
     AppState.clearChat(key);
     messagesEl.innerHTML = "";
 
@@ -111,7 +110,6 @@ const Chat = (() => {
         body: JSON.stringify({
           groupId: AppState.activeGroup,
           topicId: AppState.activeTopic,
-          speciesId: AppState.activeSpecies,
         }),
       });
     } catch { /* local history already cleared */ }

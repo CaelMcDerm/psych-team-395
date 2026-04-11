@@ -11,7 +11,7 @@
     groups = [
       {
         id: "chimps_bonobos",
-        label: "Chimpanzees & Bonobos",
+        label: "Nonhuman Primates",
         species: [
           { id: "chimpanzees", label: "Chimpanzees" },
           { id: "bonobos", label: "Bonobos" },

@@ -45,15 +45,14 @@ def chat():
     payload = request.get_json()
     group_id = payload.get("groupId")
     topic_id = payload.get("topicId")
-    species_id = payload.get("speciesId")
     message = payload.get("message", "").strip()
 
-    if not all([group_id, topic_id, species_id, message]):
-        return jsonify({"error": "groupId, topicId, speciesId, and message are required"}), 400
+    if not all([group_id, topic_id, message]):
+        return jsonify({"error": "groupId, topicId, and message are required"}), 400
 
-    chat_manager.append(group_id, topic_id, species_id, "user", message)
-    history = chat_manager.get_history(group_id, topic_id, species_id)
-    system_prompt = chat_manager.get_system_prompt(group_id, topic_id, species_id)
+    chat_manager.append(group_id, topic_id, "user", message)
+    history = chat_manager.get_history(group_id, topic_id)
+    system_prompt = chat_manager.get_system_prompt(group_id, topic_id)
 
     try:
         if config.MODEL_PROVIDER == "cloud":
@@ -63,7 +62,7 @@ def chat():
     except Exception as e:
         return jsonify({"error": str(e)}), 502
 
-    chat_manager.append(group_id, topic_id, species_id, "assistant", reply)
+    chat_manager.append(group_id, topic_id, "assistant", reply)
     return jsonify({"reply": reply})
 
 
@@ -72,8 +71,7 @@ def chat_reset():
     payload = request.get_json()
     group_id = payload.get("groupId")
     topic_id = payload.get("topicId")
-    species_id = payload.get("speciesId")
-    if not all([group_id, topic_id, species_id]):
-        return jsonify({"error": "groupId, topicId, and speciesId are required"}), 400
-    chat_manager.reset(group_id, topic_id, species_id)
+    if not all([group_id, topic_id]):
+        return jsonify({"error": "groupId and topicId are required"}), 400
+    chat_manager.reset(group_id, topic_id)
     return jsonify({"ok": True})
