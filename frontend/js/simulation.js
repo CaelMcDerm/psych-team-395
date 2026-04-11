@@ -26,7 +26,7 @@ const Simulation = (() => {
     
     window.addEventListener("control-change", (e) => {
       const { key, controlKey } = e.detail;
-      if (controlKey === "popSize") resetPop(key);
+      if (controlKey === "popSize" || controlKey === "groupSize" || controlKey === "predatorCount" || controlKey === "initialProsocial") resetPop(key);
     });
   }
 
@@ -76,11 +76,86 @@ const Simulation = (() => {
         species,
         phase: "setup", phaseT: 0,
         trial: 0, faceCount: 0, gazeCount: 0,
-        humanAngle: 0,        // current head angle of human
-        humanTargetAngle: 0,  // angle the human's head is animating toward
-        animalAngle: Math.PI, // animal initially faces left toward human
+        humanAngle: 0,
+        humanTargetAngle: 0,
+        animalAngle: Math.PI,
         animalTargetAngle: Math.PI,
         lastResult: null, resultTmr: 0,
+      };
+      return;
+    }
+
+    if (topic === "culture") {
+      const s = AppState.getState(k);
+      const cv = s.controls;
+      const isCumulative = species === "cumulative_culture";
+      const baseSkill = 1.0;
+      const baseWalnuts = Math.round(cv.groupSize * baseSkill * (3 + Math.random()));
+      pops[k] = {
+        kind: "culture",
+        species,
+        gen: 0,
+        skill: baseSkill,
+        frame: 0,
+        monkeys: [],
+        history: [{ gen: 0, walnuts: baseWalnuts, skill: baseSkill }],
+        flashMsg: null, flashTmr: 0,
+        crackEvents: [],
+      };
+      const w = cw(), h = ch();
+      for (let i = 0; i < cv.groupSize; i++) {
+        pops[k].monkeys.push({
+          x: w * 0.15 + Math.random() * w * 0.5,
+          y: h * 0.25 + Math.random() * h * 0.45,
+          vx: (Math.random() - 0.5) * 30,
+          vy: (Math.random() - 0.5) * 30,
+          cracking: 0,
+        });
+      }
+      return;
+    }
+
+    if (topic === "self_domestication") {
+      const s = AppState.getState(k);
+      const cv = s.controls;
+      const w = cw(), h = ch();
+      const agents = [];
+      for (let i = 0; i < cv.popSize; i++) {
+        const prosociality = Math.random() < cv.initialProsocial
+          ? 0.6 + Math.random() * 0.4   // prosocial: 0.6–1.0
+          : Math.random() * 0.4;          // aggressive: 0.0–0.4
+        agents.push({
+          x: Math.random() * (w - 40) + 20,
+          y: Math.random() * (h - 80) + 20,
+          vx: (Math.random() - 0.5) * 40,
+          vy: (Math.random() - 0.5) * 40,
+          prosociality,
+          fitness: 1,
+          alive: true,
+          flash: 0, flashCol: "#fff",
+          groupId: -1,
+        });
+      }
+      const predators = [];
+      for (let i = 0; i < cv.predatorCount; i++) {
+        predators.push({
+          x: Math.random() * w,
+          y: Math.random() * (h - 80),
+          vx: (Math.random() - 0.5) * 50,
+          vy: (Math.random() - 0.5) * 50,
+          attackCooldown: 0,
+          attacking: null,
+        });
+      }
+      const prosocialPct = agents.filter(a => a.prosociality >= 0.5).length / agents.length;
+      pops[k] = {
+        kind: "selfdom",
+        agents, predators,
+        gen: 0, frame: 0,
+        history: [{ gen: 0, prosocialPct, alive: agents.length }],
+        flashMsg: null, flashTmr: 0,
+        deathEvents: [],
+        shieldEvents: [],
       };
       return;
     }
@@ -712,13 +787,776 @@ const Simulation = (() => {
     drawGazeOverlay(pop);
   }
 
+  // === Culture simulation (vervet monkeys — normative vs cumulative) ===
+
+  function drawMonkey(x, y, cracking) {
+    // Body
+    ctx.beginPath();
+    ctx.ellipse(x, y, 10, 8, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "#7a8a6e"; ctx.fill();
+    ctx.strokeStyle = "#4a5a3e"; ctx.lineWidth = 1.5; ctx.stroke();
+    // Head
+    ctx.beginPath();
+    ctx.arc(x - 9, y - 5, 6, 0, Math.PI * 2);
+    ctx.fillStyle = "#c2b8a0"; ctx.fill();
+    ctx.strokeStyle = "#4a5a3e"; ctx.stroke();
+    // Face
+    ctx.beginPath(); ctx.arc(x - 11, y - 6, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#222"; ctx.fill();
+    // Tail
+    ctx.beginPath();
+    ctx.moveTo(x + 9, y - 2);
+    ctx.quadraticCurveTo(x + 20, y - 14, x + 16, y - 20);
+    ctx.strokeStyle = "#4a5a3e"; ctx.lineWidth = 1.5; ctx.stroke();
+    // Arms — if cracking, show motion
+    if (cracking > 0) {
+      const lift = Math.sin(cracking * 8) * 6;
+      ctx.beginPath();
+      ctx.moveTo(x - 5, y + 3); ctx.lineTo(x - 12, y + 10 + lift);
+      ctx.moveTo(x + 3, y + 5); ctx.lineTo(x + 2, y + 14);
+      ctx.strokeStyle = "#4a5a3e"; ctx.lineWidth = 1.5; ctx.stroke();
+      // Rock in hand
+      ctx.beginPath();
+      ctx.arc(x - 12, y + 10 + lift, 3, 0, Math.PI * 2);
+      ctx.fillStyle = "#888"; ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(x - 5, y + 3); ctx.lineTo(x - 8, y + 12);
+      ctx.moveTo(x + 3, y + 5); ctx.lineTo(x + 2, y + 14);
+      ctx.strokeStyle = "#4a5a3e"; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+    // Legs
+    ctx.beginPath();
+    ctx.moveTo(x - 4, y + 7); ctx.lineTo(x - 7, y + 17);
+    ctx.moveTo(x + 4, y + 7); ctx.lineTo(x + 7, y + 17);
+    ctx.strokeStyle = "#4a5a3e"; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+
+  function drawWalnut(x, y, cracked) {
+    if (cracked) {
+      // Two halves separated
+    ctx.beginPath();
+      ctx.ellipse(x - 3, y, 4, 3.5, -0.2, 0, Math.PI * 2);
+      ctx.fillStyle = "#6b4f2a"; ctx.fill();
+    ctx.strokeStyle = "#4a3510"; ctx.lineWidth = 1; ctx.stroke();
+      // Inner meat visible
+      ctx.beginPath();
+      ctx.ellipse(x - 3, y, 2.5, 2, -0.2, 0, Math.PI * 2);
+      ctx.fillStyle = "#c9a96e"; ctx.fill();
+      // Second half
+      ctx.beginPath();
+      ctx.ellipse(x + 3, y + 1, 3.5, 3, 0.2, 0, Math.PI * 2);
+      ctx.fillStyle = "#5e4422"; ctx.fill();
+      ctx.strokeStyle = "#4a3510"; ctx.lineWidth = 1; ctx.stroke();
+    } else {
+      // Whole walnut — rounder, with ridge
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = "#8B6914"; ctx.fill();
+      ctx.strokeStyle = "#6b5210"; ctx.lineWidth = 1.2; ctx.stroke();
+      // Ridge line
+      ctx.beginPath();
+      ctx.moveTo(x, y - 5); ctx.lineTo(x, y + 5);
+      ctx.strokeStyle = "#7a5c12"; ctx.lineWidth = 0.8; ctx.stroke();
+    }
+  }
+
+  function drawCultureGraph(pop) {
+    const w = cw(), h = ch();
+    const hist = pop.history;
+    if (hist.length < 1) return;
+
+    // Graph dimensions - bottom right
+    const gW = 240, gH = 120;
+    const gx = w - gW - 20, gy = h - gH - 100;
+
+    // Background
+    ctx.fillStyle = "rgba(15,17,23,0.92)";
+    ctx.fillRect(gx - 12, gy - 24, gW + 24, gH + 40);
+    ctx.strokeStyle = "rgba(42,45,58,0.8)"; ctx.lineWidth = 0.5;
+    ctx.strokeRect(gx - 12, gy - 24, gW + 24, gH + 40);
+
+    // Title
+    ctx.font = "10px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+    ctx.fillText("Walnuts cracked / generation", gx, gy - 10);
+
+    // Axes
+    ctx.strokeStyle = "#2a2d3a"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(gx, gy); ctx.lineTo(gx, gy + gH);
+    ctx.lineTo(gx + gW, gy + gH);
+    ctx.stroke();
+
+    if (hist.length < 2) return;
+
+    // Find max walnuts for scaling
+    const maxW = Math.max(...hist.map(h => h.walnuts), 1) * 1.15;
+    const maxGen = Math.max(hist.length - 1, 1);
+
+    // Draw walnut line
+    const color = pop.species === "cumulative_culture" ? "#ef9f27" : "#9FE1CB";
+    ctx.beginPath();
+    hist.forEach((pt, i) => {
+      const px = gx + (i / maxGen) * gW;
+      const py = gy + gH - (pt.walnuts / maxW) * gH;
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    });
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+
+    // Draw dots
+    hist.forEach((pt, i) => {
+      const px = gx + (i / maxGen) * gW;
+      const py = gy + gH - (pt.walnuts / maxW) * gH;
+      ctx.beginPath(); ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = color; ctx.fill();
+    });
+
+    // Draw skill line (secondary)
+    const maxSkill = Math.max(...hist.map(h => h.skill), 1) * 1.15;
+    const skillColor = pop.species === "cumulative_culture" ? "#378add" : "#8b8fa3";
+    ctx.beginPath();
+    hist.forEach((pt, i) => {
+      const px = gx + (i / maxGen) * gW;
+      const py = gy + gH - (pt.skill / maxSkill) * gH;
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    });
+    ctx.strokeStyle = skillColor; ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+
+    // Axis labels
+    ctx.font = "9px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+    ctx.fillText("Gen 0", gx, gy + gH + 12);
+    ctx.textAlign = "right";
+    ctx.fillText(`Gen ${hist[hist.length - 1].gen}`, gx + gW, gy + gH + 12);
+    ctx.textAlign = "left";
+
+    // Latest walnut count
+    const latest = hist[hist.length - 1];
+    ctx.font = "11px 'JetBrains Mono', monospace"; ctx.fillStyle = "#e1e4ed";
+    ctx.fillText(`${latest.walnuts} walnuts`, gx + gW - 80, gy - 10);
+
+    // Inline legend
+    const ly = gy + gH + 10;
+    ctx.beginPath(); ctx.arc(gx + 4, ly, 3, 0, Math.PI * 2);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.font = "9px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+    ctx.fillText("Walnuts", gx + 10, ly + 3);
+    ctx.beginPath(); ctx.arc(gx + 72, ly, 3, 0, Math.PI * 2);
+    ctx.fillStyle = skillColor; ctx.fill();
+    ctx.fillStyle = "#8b8fa3";
+    ctx.fillText("Skill", gx + 78, ly + 3);
+  }
+
+  function drawCultureSim(dt, key) {
+    const pop = pops[key];
+    if (!pop) return;
+    const w = cw(), h = ch();
+    const cv = AppState.getState(key).controls;
+    const isCumulative = pop.species === "cumulative_culture";
+    const speed = cv.genSpeed;
+
+    ctx.fillStyle = "#0f1117"; ctx.fillRect(0, 0, w, h);
+
+    // Ground
+    ctx.fillStyle = "#1a1f12";
+    ctx.fillRect(0, h * 0.75, w, h * 0.25);
+    ctx.strokeStyle = "#2a3418"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, h * 0.75); ctx.lineTo(w, h * 0.75); ctx.stroke();
+
+    // Move monkeys gently
+    pop.monkeys.forEach(m => {
+      m.vx += (Math.random() - 0.5) * 15 * dt;
+      m.vy += (Math.random() - 0.5) * 15 * dt;
+      const spd = Math.sqrt(m.vx * m.vx + m.vy * m.vy);
+      if (spd > 25) { m.vx = (m.vx / spd) * 25; m.vy = (m.vy / spd) * 25; }
+      m.vx *= 0.96; m.vy *= 0.96;
+      m.x += m.vx * dt; m.y += m.vy * dt;
+      // Bounds
+      if (m.x < 30) { m.x = 30; m.vx = Math.abs(m.vx); }
+      if (m.x > w * 0.6) { m.x = w * 0.6; m.vx = -Math.abs(m.vx); }
+      if (m.y < h * 0.25) { m.y = h * 0.25; m.vy = Math.abs(m.vy); }
+      if (m.y > h * 0.68) { m.y = h * 0.68; m.vy = -Math.abs(m.vy); }
+      // Cracking timer
+      if (m.cracking > 0) m.cracking -= dt * speed;
+    });
+
+    // Randomly trigger cracking animations
+    if (Math.random() < 0.03 * speed) {
+      const m = pop.monkeys[Math.floor(Math.random() * pop.monkeys.length)];
+      if (m.cracking <= 0) {
+        m.cracking = 1.5;
+        // Add a crack event near the monkey
+        pop.crackEvents.push({
+          x: m.x + 5, y: m.y + 14,
+          t: 1.0,
+        });
+      }
+    }
+
+    // Draw scattered walnuts on the ground
+    const walnutSeed = pop.gen * 137;
+    const walnutCount = Math.min(Math.round(pop.history[pop.history.length - 1].walnuts / 2), 30);
+    for (let i = 0; i < walnutCount; i++) {
+      const wx = 20 + ((walnutSeed + i * 73) % (Math.floor(w * 0.6))) ;
+      const wy = h * 0.76 + ((walnutSeed + i * 47) % Math.floor(h * 0.18));
+      const cracked = i < walnutCount * 0.6;
+      drawWalnut(wx, wy, cracked);
+    }
+
+    // Draw crack events
+    pop.crackEvents = pop.crackEvents.filter(e => {
+      e.t -= dt * speed;
+      if (e.t <= 0) return false;
+      const al = e.t;
+      ctx.font = "bold 12px sans-serif";
+      ctx.fillStyle = `rgba(239,159,39,${al})`;
+      ctx.textAlign = "center";
+      ctx.fillText("💥", e.x, e.y - (1 - e.t) * 15);
+      ctx.textAlign = "left";
+      return true;
+    });
+
+    // Draw monkeys
+    pop.monkeys.forEach(m => drawMonkey(m.x, m.y, m.cracking));
+
+    // Generation timer
+    pop.frame += dt * speed * 60;
+    const genLength = 360;
+    if (pop.frame >= genLength) {
+      pop.frame = 0;
+      pop.gen++;
+
+      if (isCumulative) {
+        const innovRate = cv.innovationRate || 0.15;
+        pop.skill += pop.skill * innovRate * (0.7 + Math.random() * 0.6);
+      }
+      // Slight random variation but no improvement for normative
+      const variation = 0.95 + Math.random() * 0.1;
+      const walnuts = Math.round(cv.groupSize * pop.skill * (3 + Math.random()) * variation);
+      pop.history.push({ gen: pop.gen, walnuts, skill: pop.skill });
+      if (pop.history.length > 40) pop.history.shift();
+
+      pop.flashMsg = `Generation ${pop.gen}`;
+      pop.flashTmr = 55;
+
+      // Rebuild monkeys for new generation
+      pop.monkeys = [];
+      for (let i = 0; i < cv.groupSize; i++) {
+        pop.monkeys.push({
+          x: w * 0.15 + Math.random() * w * 0.5,
+          y: h * 0.25 + Math.random() * h * 0.45,
+          vx: (Math.random() - 0.5) * 30,
+          vy: (Math.random() - 0.5) * 30,
+          cracking: 0,
+        });
+      }
+    }
+
+    // Draw graph
+    drawCultureGraph(pop);
+
+    // Generation progress bar
+    const pct = pop.frame / genLength;
+    ctx.fillStyle = "#2a2d3a"; ctx.fillRect(14, h - 50, w - 28, 3);
+    ctx.fillStyle = "#9FE1CB"; ctx.fillRect(14, h - 50, (w - 28) * pct, 3);
+
+    // Footer
+    ctx.font = "12px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+    const modeLabel = isCumulative ? "Cumulative Culture (hypothetical)" : "Normative Conformity";
+    ctx.fillText(`Vervet Monkeys • ${modeLabel} • Gen ${pop.gen}`, 14, h - 60);
+
+    // Flash message
+    if (pop.flashTmr > 0) {
+      const al = Math.min(pop.flashTmr / 20, 1);
+      ctx.font = "bold 15px 'JetBrains Mono', monospace";
+      ctx.fillStyle = `rgba(225,228,237,${al})`;
+      ctx.textAlign = "center"; ctx.fillText(pop.flashMsg, w / 2, h * 0.15); ctx.textAlign = "left";
+      pop.flashTmr--;
+    }
+  }
+
+  // === Self-Domestication simulation (humans) ===
+
+  function isProsocial(a) { return a.prosociality >= 0.5; }
+
+  function selfdomPhysics(pop, dt) {
+    const ag = pop.agents.filter(a => a.alive);
+    const w = cw(), h = ch();
+    const simH = h - 70; // keep above footer area
+
+    // Prosocial humans attract each other
+    const prosocials = ag.filter(a => isProsocial(a));
+    prosocials.forEach(a => {
+      prosocials.forEach(b => {
+        if (a === b) return;
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d > 20 && d < 160) {
+          const pull = 35 * a.prosociality * dt;
+          a.vx += (dx / d) * pull;
+          a.vy += (dy / d) * pull;
+        }
+      });
+    });
+
+    // Aggressive humans pushed away from groups
+    ag.forEach(a => {
+      if (isProsocial(a)) return;
+      prosocials.forEach(b => {
+        const dx = a.x - b.x, dy = a.y - b.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 50 && d > 0) {
+          const push = 60 * (1 - a.prosociality) * dt;
+          a.vx += (dx / d) * push;
+          a.vy += (dy / d) * push;
+        }
+      });
+    });
+
+    // Basic movement + repulsion
+    const REPEL = 16, RF = 150, CAP = 60;
+    ag.forEach(a => {
+      if (a.flash > 0) a.flash--;
+      a.vx += (Math.random() - 0.5) * 20 * dt * 60;
+      a.vy += (Math.random() - 0.5) * 20 * dt * 60;
+      const spd = Math.sqrt(a.vx * a.vx + a.vy * a.vy);
+      if (spd > CAP) { a.vx = (a.vx / spd) * CAP; a.vy = (a.vy / spd) * CAP; }
+      a.vx *= 0.96; a.vy *= 0.96;
+      a.x += a.vx * dt; a.y += a.vy * dt;
+      if (a.x < 12) { a.x = 12; a.vx = Math.abs(a.vx); }
+      if (a.x > w - 12) { a.x = w - 12; a.vx = -Math.abs(a.vx); }
+      if (a.y < 12) { a.y = 12; a.vy = Math.abs(a.vy); }
+      if (a.y > simH - 12) { a.y = simH - 12; a.vy = -Math.abs(a.vy); }
+    });
+    for (let i = 0; i < ag.length; i++) {
+      for (let j = i + 1; j < ag.length; j++) {
+        const a = ag[i], b = ag[j];
+        const dx = b.x - a.x, dy = b.y - a.y, d = Math.sqrt(dx * dx + dy * dy);
+        if (d < REPEL && d > 0) {
+          const f = ((REPEL - d) / REPEL) * RF * dt;
+          const nx = dx / d, ny = dy / d;
+          a.vx -= nx * f; a.vy -= ny * f;
+          b.vx += nx * f; b.vy += ny * f;
+        }
+      }
+    }
+
+    // Assign group IDs: prosocial humans within 55px of each other cluster
+    ag.forEach(a => { a.groupId = -1; });
+    let gid = 0;
+    prosocials.forEach(a => {
+      if (a.groupId >= 0) return;
+      // BFS to find connected cluster
+      const cluster = [a];
+      a.groupId = gid;
+      let qi = 0;
+      while (qi < cluster.length) {
+        const cur = cluster[qi++];
+        prosocials.forEach(b => {
+          if (b.groupId >= 0) return;
+          const dx = b.x - cur.x, dy = b.y - cur.y;
+          if (Math.sqrt(dx * dx + dy * dy) < 55) {
+            b.groupId = gid;
+            cluster.push(b);
+          }
+        });
+      }
+      gid++;
+    });
+  }
+
+  function selfdomPredators(pop, dt) {
+    const w = cw(), h = ch();
+    const simH = h - 70;
+    const alive = pop.agents.filter(a => a.alive);
+
+    pop.predators.forEach(p => {
+      if (p.attackCooldown > 0) { p.attackCooldown -= dt; return; }
+
+      // Find nearest lone human (groupId === -1 OR group size < 3)
+      // Count group sizes
+      const groupSizes = {};
+      alive.forEach(a => {
+        if (a.groupId >= 0) groupSizes[a.groupId] = (groupSizes[a.groupId] || 0) + 1;
+      });
+      const loners = alive.filter(a => a.groupId < 0 || (groupSizes[a.groupId] || 0) < 3);
+
+      let target = null, minD = Infinity;
+      loners.forEach(a => {
+        const dx = a.x - p.x, dy = a.y - p.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < minD) { minD = d; target = a; }
+      });
+
+      if (target && minD < 250) {
+        // Chase
+        const dx = target.x - p.x, dy = target.y - p.y;
+        const d = Math.sqrt(dx * dx + dy * dy) || 1;
+        p.vx += (dx / d) * 120 * dt;
+        p.vy += (dy / d) * 120 * dt;
+
+        // Attack if close enough
+        if (d < 18) {
+          if (Math.random() < 0.75) {
+            // Successful predation
+            target.alive = false;
+            target.fitness = 0;
+            pop.deathEvents.push({ x: target.x, y: target.y, t: 1.5 });
+          } else {
+            // Failed — target escapes
+            target.vx += (target.x - p.x) / d * 120;
+            target.vy += (target.y - p.y) / d * 120;
+            target.flash = 20; target.flashCol = "#ef9f27";
+          }
+          p.attackCooldown = 3.0;
+          p.vx *= -0.5; p.vy *= -0.5;
+        }
+      } else {
+        // Wander near groups but get deterred
+        p.vx += (Math.random() - 0.5) * 60 * dt;
+        p.vy += (Math.random() - 0.5) * 60 * dt;
+
+        // Check if near a group — back off
+        alive.forEach(a => {
+          if (a.groupId < 0) return;
+          const gs = groupSizes[a.groupId] || 0;
+          if (gs < 3) return;
+          const dx = p.x - a.x, dy = p.y - a.y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < 70) {
+            p.vx += (dx / (d || 1)) * 80 * dt;
+            p.vy += (dy / (d || 1)) * 80 * dt;
+            // Shield flash
+            if (Math.random() < 0.02) {
+              pop.shieldEvents.push({ x: a.x, y: a.y, gid: a.groupId, t: 0.8 });
+            }
+          }
+        });
+      }
+
+      // Predator movement
+      const spd = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      if (spd > 80) { p.vx = (p.vx / spd) * 80; p.vy = (p.vy / spd) * 80; }
+      p.vx *= 0.97; p.vy *= 0.97;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.x < 0) { p.x = 0; p.vx = Math.abs(p.vx); }
+      if (p.x > w) { p.x = w; p.vx = -Math.abs(p.vx); }
+      if (p.y < 0) { p.y = 0; p.vy = Math.abs(p.vy); }
+      if (p.y > simH) { p.y = simH; p.vy = -Math.abs(p.vy); }
+    });
+
+    // Grouped prosocial humans gain fitness
+    alive.forEach(a => {
+      const groupSizes = {};
+      alive.forEach(b => {
+        if (b.groupId >= 0) groupSizes[b.groupId] = (groupSizes[b.groupId] || 0) + 1;
+      });
+      if (a.groupId >= 0 && (groupSizes[a.groupId] || 0) >= 3) {
+        a.fitness += 1.5 * dt;
+      } else {
+        a.fitness += 0.3 * dt;
+      }
+    });
+  }
+
+  function selfdomNextGen(key, pop) {
+    const cv = AppState.getState(key).controls;
+    const alive = pop.agents.filter(a => a.alive);
+    if (!alive.length) return;
+    alive.forEach(a => { a.fitness = Math.max(a.fitness, 0.1); });
+
+    function sample(pool) {
+      const tot = pool.reduce((s, a) => s + a.fitness, 0);
+      let r = Math.random() * tot;
+      for (const a of pool) { r -= a.fitness; if (r <= 0) return a; }
+      return pool[pool.length - 1];
+    }
+
+    const w = cw(), h = ch();
+    const next = [];
+    for (let i = 0; i < cv.popSize; i++) {
+      const parent = sample(alive);
+      const pro = Math.max(0, Math.min(1,
+        parent.prosociality + (Math.random() - 0.5) * 2 * cv.mutRate));
+      next.push({
+        x: Math.random() * (w - 40) + 20,
+        y: Math.random() * (h - 120) + 20,
+        vx: (Math.random() - 0.5) * 40,
+        vy: (Math.random() - 0.5) * 40,
+        prosociality: pro,
+        fitness: 1,
+        alive: true,
+        flash: 0, flashCol: "#fff",
+        groupId: -1,
+      });
+    }
+
+    // Reset predators
+    pop.predators.forEach(p => {
+      p.x = Math.random() * w;
+      p.y = Math.random() * (h - 120);
+      p.vx = (Math.random() - 0.5) * 50;
+      p.vy = (Math.random() - 0.5) * 50;
+      p.attackCooldown = 0;
+    });
+
+    pop.agents = next;
+    pop.gen++;
+    const prosocialPct = next.filter(a => isProsocial(a)).length / next.length;
+    pop.history.push({ gen: pop.gen, prosocialPct, alive: next.length });
+    if (pop.history.length > 45) pop.history.shift();
+    pop.flashMsg = `Generation ${pop.gen}`;
+    pop.flashTmr = 55;
+  }
+
+  function drawHumanAgent(x, y, prosociality, alive, flash, flashCol) {
+    if (!alive) return;
+    const pro = isProsocial({ prosociality });
+    const baseCol = pro
+      ? `rgb(${Math.round(74 + (1 - prosociality) * 60)},${Math.round(180 + prosociality * 42)},${Math.round(100 + prosociality * 28)})`
+      : `rgb(${Math.round(200 + (1 - prosociality) * 39)},${Math.round(68 + prosociality * 50)},${Math.round(68 + prosociality * 20)})`;
+
+    // Flash effect
+    if (flash > 0) {
+      ctx.beginPath(); ctx.arc(x, y, 14, 0, Math.PI * 2);
+      const al = Math.floor((flash / 20) * 60).toString(16).padStart(2, "0");
+      ctx.fillStyle = flashCol + al; ctx.fill();
+    }
+
+    // Body — stick figure
+    ctx.strokeStyle = baseCol; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y + 4); ctx.lineTo(x, y + 18);       // torso
+    ctx.moveTo(x, y + 8); ctx.lineTo(x - 7, y + 16);   // left arm
+    ctx.moveTo(x, y + 8); ctx.lineTo(x + 7, y + 16);   // right arm
+    ctx.moveTo(x, y + 18); ctx.lineTo(x - 5, y + 28);  // left leg
+    ctx.moveTo(x, y + 18); ctx.lineTo(x + 5, y + 28);  // right leg
+    ctx.stroke();
+
+    // Head
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = baseCol; ctx.fill();
+
+    // Label
+    ctx.font = "bold 7px 'JetBrains Mono', monospace";
+    ctx.fillStyle = pro ? "rgba(74,222,128,0.7)" : "rgba(239,68,68,0.7)";
+    ctx.textAlign = "center";
+    ctx.fillText(pro ? "+" : "−", x, y - 8);
+    ctx.textAlign = "left";
+  }
+
+  function drawPredator(x, y, cooldown) {
+    const al = cooldown > 0 ? 0.4 : 0.85;
+    // Body — angular predator shape
+    ctx.beginPath();
+    ctx.moveTo(x, y - 10);
+    ctx.lineTo(x + 9, y + 2);
+    ctx.lineTo(x + 6, y + 10);
+    ctx.lineTo(x - 6, y + 10);
+    ctx.lineTo(x - 9, y + 2);
+    ctx.closePath();
+    ctx.fillStyle = `rgba(120,30,30,${al})`; ctx.fill();
+    ctx.strokeStyle = `rgba(200,60,60,${al})`; ctx.lineWidth = 1.5; ctx.stroke();
+    // Eyes
+    ctx.beginPath();
+    ctx.arc(x - 3, y - 2, 1.5, 0, Math.PI * 2);
+    ctx.arc(x + 3, y - 2, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,200,50,${al})`; ctx.fill();
+  }
+
+  function drawSelfDomGraph(pop) {
+    const w = cw(), h = ch();
+    const hist = pop.history;
+    if (hist.length < 1) return;
+
+    const gW = 240, gH = 110;
+    const gx = w - gW - 20, gy = h - gH - 100;
+
+    ctx.fillStyle = "rgba(15,17,23,0.92)";
+    ctx.fillRect(gx - 12, gy - 24, gW + 24, gH + 48);
+    ctx.strokeStyle = "rgba(42,45,58,0.8)"; ctx.lineWidth = 0.5;
+    ctx.strokeRect(gx - 12, gy - 24, gW + 24, gH + 48);
+
+    ctx.font = "10px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+    ctx.fillText("Prosocial % / generation", gx, gy - 10);
+
+    // Axes
+    ctx.strokeStyle = "#2a2d3a"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(gx, gy); ctx.lineTo(gx, gy + gH);
+    ctx.lineTo(gx + gW, gy + gH);
+    ctx.stroke();
+
+    // Y-axis labels
+    ctx.fillStyle = "#555"; ctx.font = "8px 'JetBrains Mono', monospace";
+    ctx.fillText("100%", gx - 4, gy + 4); ctx.textAlign = "left";
+    ctx.fillText("0%", gx - 2, gy + gH - 2);
+
+    if (hist.length < 2) return;
+    const maxGen = Math.max(hist.length - 1, 1);
+
+    // Prosocial line (green)
+    ctx.beginPath();
+    hist.forEach((pt, i) => {
+      const px = gx + (i / maxGen) * gW;
+      const py = gy + gH - pt.prosocialPct * gH;
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    });
+    ctx.strokeStyle = "#4ade80"; ctx.lineWidth = 2; ctx.stroke();
+
+    // Aggressive line (red) = 1 - prosocial
+    ctx.beginPath();
+    hist.forEach((pt, i) => {
+      const px = gx + (i / maxGen) * gW;
+      const py = gy + gH - (1 - pt.prosocialPct) * gH;
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    });
+    ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 2; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+
+    // Dots on latest point
+    const last = hist[hist.length - 1];
+    const lpx = gx + gW, lpy = gy + gH - last.prosocialPct * gH;
+    ctx.beginPath(); ctx.arc(lpx, lpy, 3, 0, Math.PI * 2);
+    ctx.fillStyle = "#4ade80"; ctx.fill();
+
+    // Axis labels
+    ctx.font = "9px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+    ctx.fillText("Gen 0", gx, gy + gH + 12);
+    ctx.textAlign = "right";
+    ctx.fillText(`Gen ${last.gen}`, gx + gW, gy + gH + 12);
+    ctx.textAlign = "left";
+
+    // Current %
+    ctx.font = "11px 'JetBrains Mono', monospace"; ctx.fillStyle = "#e1e4ed";
+    ctx.fillText(`${Math.round(last.prosocialPct * 100)}% prosocial`, gx + gW - 100, gy - 10);
+
+    // Inline legend
+    const ly = gy + gH + 22;
+    ctx.beginPath(); ctx.arc(gx + 4, ly, 3, 0, Math.PI * 2);
+    ctx.fillStyle = "#4ade80"; ctx.fill();
+    ctx.font = "9px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+    ctx.fillText("Prosocial", gx + 10, ly + 3);
+    ctx.beginPath(); ctx.arc(gx + 80, ly, 3, 0, Math.PI * 2);
+    ctx.fillStyle = "#ef4444"; ctx.fill();
+    ctx.fillStyle = "#8b8fa3";
+    ctx.fillText("Aggressive", gx + 86, ly + 3);
+  }
+
+  function drawSelfDomSim(dt, key) {
+    const pop = pops[key];
+    if (!pop) return;
+    const w = cw(), h = ch();
+
+    ctx.fillStyle = "#0f1117"; ctx.fillRect(0, 0, w, h);
+
+    // Run physics
+    selfdomPhysics(pop, dt);
+    selfdomPredators(pop, dt);
+
+    // Draw group circles for clusters of 3+
+    const alive = pop.agents.filter(a => a.alive);
+    const groupSizes = {};
+    const groupCenters = {};
+    alive.forEach(a => {
+      if (a.groupId >= 0) {
+        if (!groupSizes[a.groupId]) { groupSizes[a.groupId] = 0; groupCenters[a.groupId] = { sx: 0, sy: 0 }; }
+        groupSizes[a.groupId]++;
+        groupCenters[a.groupId].sx += a.x;
+        groupCenters[a.groupId].sy += a.y;
+      }
+    });
+    Object.entries(groupSizes).forEach(([gid, size]) => {
+      if (size < 3) return;
+      const cx = groupCenters[gid].sx / size;
+      const cy = groupCenters[gid].sy / size;
+      // Find radius
+      let maxR = 0;
+      alive.filter(a => a.groupId === parseInt(gid)).forEach(a => {
+        const d = Math.sqrt((a.x - cx) ** 2 + (a.y - cy) ** 2);
+        if (d > maxR) maxR = d;
+      });
+      const r = Math.max(maxR + 20, 30);
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(74,222,128,0.06)"; ctx.fill();
+      ctx.strokeStyle = "rgba(74,222,128,0.25)"; ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
+      // Group label
+      ctx.font = "9px 'JetBrains Mono', monospace";
+      ctx.fillStyle = "rgba(74,222,128,0.4)";
+      ctx.textAlign = "center";
+      ctx.fillText(`group (${size})`, cx, cy - r - 4);
+      ctx.textAlign = "left";
+    });
+
+    // Draw death events
+    pop.deathEvents = pop.deathEvents.filter(e => {
+      e.t -= dt;
+      if (e.t <= 0) return false;
+      const al = e.t / 1.5;
+      ctx.font = "16px sans-serif"; ctx.fillStyle = `rgba(239,68,68,${al})`;
+      ctx.textAlign = "center";
+      ctx.fillText("💀", e.x, e.y - (1.5 - e.t) * 12);
+      ctx.textAlign = "left";
+      return true;
+    });
+
+    // Draw shield events
+    pop.shieldEvents = pop.shieldEvents.filter(e => {
+      e.t -= dt;
+      if (e.t <= 0) return false;
+      const al = e.t / 0.8;
+      ctx.font = "12px sans-serif"; ctx.fillStyle = `rgba(74,222,128,${al})`;
+      ctx.textAlign = "center";
+      ctx.fillText("🛡", e.x, e.y - (0.8 - e.t) * 10);
+      ctx.textAlign = "left";
+      return true;
+    });
+
+    // Draw predators
+    pop.predators.forEach(p => drawPredator(p.x, p.y, p.attackCooldown));
+
+    // Draw humans
+    alive.forEach(a => drawHumanAgent(a.x, a.y, a.prosociality, a.alive, a.flash, a.flashCol));
+
+    // Draw graph
+    drawSelfDomGraph(pop);
+
+    // Generation timer
+    pop.frame++;
+    if (pop.frame % 400 === 0) {
+      selfdomNextGen(key, pop);
+    }
+
+    // Progress bar
+    const pct = (pop.frame % 400) / 400;
+    ctx.fillStyle = "#2a2d3a"; ctx.fillRect(14, h - 50, w - 28, 3);
+    ctx.fillStyle = "#4ade80"; ctx.fillRect(14, h - 50, (w - 28) * pct, 3);
+
+    // Footer
+    const aliveCount = pop.agents.filter(a => a.alive).length;
+    const prosCount = pop.agents.filter(a => a.alive && isProsocial(a)).length;
+    ctx.font = "12px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+    ctx.fillText(`Gen ${pop.gen}  •  alive: ${aliveCount}  •  prosocial: ${prosCount}  •  aggressive: ${aliveCount - prosCount}`, 14, h - 60);
+
+    // Flash
+    if (pop.flashTmr > 0) {
+      const al = Math.min(pop.flashTmr / 20, 1);
+      ctx.font = "bold 15px 'JetBrains Mono', monospace";
+      ctx.fillStyle = `rgba(225,228,237,${al})`;
+      ctx.textAlign = "center"; ctx.fillText(pop.flashMsg, w / 2, 30); ctx.textAlign = "left";
+      pop.flashTmr--;
+    }
+  }
+
   // Renderer registry — maps key patterns to render functions.
-  // Uses exact match first, then pattern match on "group:topic:*".
   const renderers = {
     "chimps_bonobos:aggression:chimpanzees": drawAggressionSim,
     "chimps_bonobos:aggression:bonobos": drawAggressionSim,
+    "chimps_bonobos:culture:normative_conformity": drawCultureSim,
+    "chimps_bonobos:culture:cumulative_culture": drawCultureSim,
     "dogs_wolves:gaze_following:dogs": drawGazeSim,
     "dogs_wolves:gaze_following:wolves": drawGazeSim,
+    "humans:self_domestication:humans": drawSelfDomSim,
   };
 
   function getRenderer(key) {

@@ -18,6 +18,24 @@
         ],
         topics: [
           { id: "aggression", label: "Aggression" },
+          {
+            id: "culture",
+            label: "Culture",
+            species: [
+              { id: "normative_conformity", label: "Normative Conformity" },
+              { id: "cumulative_culture", label: "Cumulative Culture" },
+            ],
+          },
+        ],
+      },
+      {
+        id: "humans",
+        label: "Humans",
+        species: [
+          { id: "humans", label: "Humans" },
+        ],
+        topics: [
+          { id: "self_domestication", label: "Self-Domestication" },
         ],
       },
     ];
@@ -43,6 +61,12 @@
   switchGroup(groups[0].id);
 })();
 
+/** Get the species list for a given topic (topic-level override or group default) */
+function getSpeciesForTopic(group, topicId) {
+  const topic = group.topics.find(t => t.id === topicId);
+  return (topic && topic.species) || group.species;
+}
+
 /** Switch the top-level group tab */
 function switchGroup(groupId) {
   const group = AppState.groups.find(g => g.id === groupId);
@@ -58,21 +82,28 @@ function switchGroup(groupId) {
   // Render topic pills
   renderTopicPills(group);
 
-  // Render species toggle
-  renderSpeciesToggle(group);
-
-  // Activate first topic + first species
-  AppState.activeTopic = group.topics[0].id;
-  AppState.activeSpecies = group.species[0].id;
-  highlightTopicPill(group.topics[0].id);
-  highlightSpeciesBtn(group.species[0].id);
+  // Activate first topic + its species
+  const firstTopic = group.topics[0];
+  AppState.activeTopic = firstTopic.id;
+  const speciesList = getSpeciesForTopic(group, firstTopic.id);
+  renderSpeciesToggle(speciesList);
+  AppState.activeSpecies = speciesList[0].id;
+  highlightTopicPill(firstTopic.id);
+  highlightSpeciesBtn(speciesList[0].id);
   activateCurrent();
 }
 
 /** Switch the topic within the current group */
 function switchTopic(topicId) {
+  const group = AppState.groups.find(g => g.id === AppState.activeGroup);
   AppState.activeTopic = topicId;
   highlightTopicPill(topicId);
+
+  // Re-render species toggle for this topic
+  const speciesList = getSpeciesForTopic(group, topicId);
+  renderSpeciesToggle(speciesList);
+  AppState.activeSpecies = speciesList[0].id;
+  highlightSpeciesBtn(speciesList[0].id);
   activateCurrent();
 }
 
@@ -114,7 +145,7 @@ function renderTopicPills(group) {
   });
 }
 
-function renderSpeciesToggle(group) {
+function renderSpeciesToggle(speciesList) {
   const container = document.getElementById("species-toggle");
   container.innerHTML = "";
 
@@ -127,7 +158,7 @@ function renderSpeciesToggle(group) {
   const toggleWrap = document.createElement("div");
   toggleWrap.className = "species-toggle-wrap";
 
-  group.species.forEach(sp => {
+  speciesList.forEach(sp => {
     const btn = document.createElement("button");
     btn.className = "species-btn";
     btn.dataset.speciesId = sp.id;

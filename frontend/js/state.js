@@ -34,6 +34,21 @@ const AppState = (() => {
       { key: "targetDistance", label: "Target Distance",    min: 0.0, max: 1.0, step: 0.05, default: 0.7 },
       { key: "trialSpeed",     label: "Trial Speed",        min: 0.5, max: 2.0, step: 0.1,  default: 1.0 },
     ],
+    "chimps_bonobos:culture:normative_conformity": [
+      { key: "groupSize",     label: "Group Size",          min: 3,   max: 12,  step: 1,    default: 6   },
+      { key: "genSpeed",      label: "Generation Speed",    min: 0.5, max: 3.0, step: 0.25, default: 1.0 },
+    ],
+    "chimps_bonobos:culture:cumulative_culture": [
+      { key: "groupSize",     label: "Group Size",          min: 3,   max: 12,  step: 1,    default: 6   },
+      { key: "genSpeed",      label: "Generation Speed",    min: 0.5, max: 3.0, step: 0.25, default: 1.0 },
+      { key: "innovationRate", label: "Innovation Rate",    min: 0.05, max: 0.5, step: 0.05, default: 0.15 },
+    ],
+    "humans:self_domestication:humans": [
+      { key: "popSize",       label: "Population",          min: 16,  max: 60,  step: 2,    default: 30  },
+      { key: "predatorCount", label: "Predator Count",      min: 1,   max: 8,   step: 1,    default: 3   },
+      { key: "mutRate",       label: "Mutation Rate",        min: 0.01, max: 0.15, step: 0.01, default: 0.05 },
+      { key: "initialProsocial", label: "Initial Prosocial %", min: 0.2, max: 0.8, step: 0.05, default: 0.5 },
+    ],
   };
 
   // Info text keyed by "group:topic:species"
@@ -80,6 +95,40 @@ const AppState = (() => {
 </div>
 <p class="citation"><small>Miklósi, Á., Kubinyi, E., Topál, J., Gácsi, M., Virányi, Z., &amp; Csányi, V. (2003). A simple reason for a big difference: Wolves do not look back at humans, but dogs do. <em>Current Biology, 13</em>(9), 763–766.</small></p>`,
   };
+
+  // Culture info texts
+  infoTexts["chimps_bonobos:culture:normative_conformity"] = `<p><strong>Normative Conformity</strong> — Vervet monkeys learn to crack walnuts by observing others. Once a technique is acquired, it is transmitted faithfully across generations <strong>without improvement</strong>.</p>
+<p>Each generation cracks roughly the <strong>same number</strong> of walnuts as the one before. Monkeys imitate because they see the behavior, not because they have a concept of cultural norms — but the effect mimics conformity.</p>
+<p>Watch the graph: walnut output stays <strong>flat</strong> across generations. This is what real nonhuman primate cultural transmission looks like.</p>
+<div class="legend-block">
+  <div class="legend-row"><span class="dot" style="background:#8B6914"></span> Whole walnut (uncracked)</div>
+  <div class="legend-row"><span class="dot" style="background:#6b4f2a"></span> Cracked walnut (split open)</div>
+  <div class="legend-row"><span class="dot" style="background:#9FE1CB"></span> Walnuts cracked / generation (graph)</div>
+  <div class="legend-row"><span class="dot" style="background:#8b8fa3"></span> Technique skill (graph, flat)</div>
+</div>`;
+
+  infoTexts["chimps_bonobos:culture:cumulative_culture"] = `<p><strong>Cumulative Culture</strong> — A hypothetical scenario: what if vervet monkeys <em>could</em> build on previous generations' innovations?</p>
+<p>In this simulation, each generation improves on the walnut-cracking technique inherited from the last. Over time, efficiency <strong>increases</strong> and more walnuts are cracked per generation — a cultural ratchet effect.</p>
+<p>This is what nonhuman primates do <strong>NOT</strong> actually do. Cumulative culture requires high-fidelity imitation, teaching, and intentional innovation — capacities associated with human cultural evolution, not nonhuman primates.</p>
+<p>Watch the graph: walnut output <strong>climbs</strong> across generations, illustrating the ratchet effect absent in real primate populations.</p>
+<div class="legend-block">
+  <div class="legend-row"><span class="dot" style="background:#8B6914"></span> Whole walnut (uncracked)</div>
+  <div class="legend-row"><span class="dot" style="background:#6b4f2a"></span> Cracked walnut (split open)</div>
+  <div class="legend-row"><span class="dot" style="background:#ef9f27"></span> Walnuts cracked / generation (graph)</div>
+  <div class="legend-row"><span class="dot" style="background:#378add"></span> Technique skill (graph, rising)</div>
+</div>`;
+
+  // Self-domestication info text
+  infoTexts["humans:self_domestication:humans"] = `<p><strong>Self-Domestication Hypothesis</strong> — Humans may have undergone "domestication syndrome" without intentional breeding: selection for tolerance and reduced aggression led to behavioral, morphological, and cognitive changes.</p>
+<p><strong>Prosocial</strong> humans (green) form cooperative groups, sharing resources and gaining protection from predators. <strong>Aggressive</strong> humans (red) are rejected from groups and remain alone.</p>
+<p>Predators (dark shapes) target lone individuals with a <strong>75% success rate</strong>, but cannot take down groups. Over generations, prosocial humans survive more and pass on their traits — the population self-domesticates.</p>
+<p style="margin-top:0.75rem; padding:0.5rem 0.75rem; background:rgba(59,130,246,0.1); border-left:2px solid var(--accent); border-radius:3px; font-size:0.8125rem;"><strong>Tip:</strong> Explore <em>Nonhuman Primates → Aggression</em> first to see how aggression and mate choice interact in chimpanzees and bonobos — it provides useful context for this simulation.</p>
+<div class="legend-block">
+  <div class="legend-row"><span class="dot" style="background:#4ade80"></span> Prosocial human</div>
+  <div class="legend-row"><span class="dot" style="background:#ef4444"></span> Aggressive human</div>
+  <div class="legend-row"><span class="dot" style="background:#1e1e2e; border:2px solid #e24b4a"></span> Predator</div>
+  <div class="legend-row"><span class="dot" style="background:rgba(74,222,128,0.2); border:1.5px dashed #4ade80"></span> Cooperative group</div>
+</div>`;
 
   function initState(key) {
     if (store[key]) return;
