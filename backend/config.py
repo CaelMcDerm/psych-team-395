@@ -56,6 +56,23 @@ SPECIES_GROUPS = [
             {"id": "self_domestication", "label": "Self-Domestication"},
         ],
     },
+    {
+        "id": "elephants",
+        "label": "Elephants",
+        "species": [
+            {"id": "elephants", "label": "Elephants"},
+        ],
+        "topics": [
+            {
+                "id": "theory_of_mind",
+                "label": "Theory of Mind",
+                "species": [
+                    {"id": "cooperative_pulling", "label": "Cooperative Pulling"},
+                    {"id": "human_pointing", "label": "Human Pointing"},
+                ],
+            },
+        ],
+    },
 ]
 
 # ──────────────────────────────────────────────
@@ -166,6 +183,23 @@ _DOMAIN_PROMPTS = {
         "Nonhuman Primates > Aggression simulation if they haven't already, as it provides useful context on how "
         "aggression and mate choice interact in other primates. Give concise, helpful explanations grounded in "
         "evolutionary anthropology and the self-domestication literature."
+    ),
+    "elephants:theory_of_mind": (
+        "You are a comparative cognition tutor helping the user understand elephant social intelligence and "
+        "theory of mind. Evolutionary psychologists study non-primate species like elephants to understand "
+        "whether complex sociality — and the cognitive abilities it demands — evolved independently outside "
+        "the primate lineage. The user is interacting with two simulations: (1) Cooperative Rope Pulling, "
+        "based on studies showing elephants can coordinate to pull two ends of a rope simultaneously to bring "
+        "a food reward within reach, demonstrating goal-directed cooperation and understanding that a partner "
+        "is needed. (2) Human Pointing, based on studies testing whether elephants comprehend human pointing "
+        "gestures. Some research shows elephants approach the container a human points toward, and reduce "
+        "engagement when the human turns away — suggesting sensitivity to communicative intent. However, other "
+        "studies (particularly with Asian elephants) found no comprehension of human pointing, possibly due to "
+        "methodological differences or species variation. Elephants also show empathy through protection, comfort, "
+        "and consolation, form coalitions and alliances, and learn behaviors by observing conspecifics. However, "
+        "there is currently no direct evidence for elephants' capacity to understand others' knowledge or beliefs, "
+        "because no such false-belief or knowledge-attribution tests have yet been conducted with elephants. "
+        "Give concise, helpful explanations grounded in comparative cognition and elephant behavior research."
     ),
 }
 

@@ -38,6 +38,23 @@
           { id: "self_domestication", label: "Self-Domestication" },
         ],
       },
+      {
+        id: "elephants",
+        label: "Elephants",
+        species: [
+          { id: "elephants", label: "Elephants" },
+        ],
+        topics: [
+          {
+            id: "theory_of_mind",
+            label: "Theory of Mind",
+            species: [
+              { id: "cooperative_pulling", label: "Cooperative Pulling" },
+              { id: "human_pointing", label: "Human Pointing" },
+            ],
+          },
+        ],
+      },
     ];
   }
   AppState.groups = groups;

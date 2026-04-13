@@ -49,6 +49,13 @@ const AppState = (() => {
       { key: "mutRate",       label: "Mutation Rate",        min: 0.01, max: 0.15, step: 0.01, default: 0.05 },
       { key: "initialProsocial", label: "Initial Prosocial %", min: 0.2, max: 0.8, step: 0.05, default: 0.5 },
     ],
+    "elephants:theory_of_mind:cooperative_pulling": [
+      { key: "trialSpeed",    label: "Trial Speed",        min: 0.5, max: 3.0, step: 0.25, default: 1.0 },
+      { key: "waitTolerance", label: "Wait Tolerance",     min: 0.5, max: 5.0, step: 0.25, default: 2.5 },
+    ],
+    "elephants:theory_of_mind:human_pointing": [
+      { key: "trialSpeed",    label: "Trial Speed",        min: 0.5, max: 3.0, step: 0.25, default: 1.0 },
+    ],
   };
 
   // Info text keyed by "group:topic:species"
@@ -128,6 +135,32 @@ const AppState = (() => {
   <div class="legend-row"><span class="dot" style="background:#ef4444"></span> Aggressive human</div>
   <div class="legend-row"><span class="dot" style="background:#1e1e2e; border:2px solid #e24b4a"></span> Predator</div>
   <div class="legend-row"><span class="dot" style="background:rgba(74,222,128,0.2); border:1.5px dashed #4ade80"></span> Cooperative group</div>
+</div>`;
+
+  // Elephant info texts
+  infoTexts["elephants:theory_of_mind:cooperative_pulling"] = `<p><strong>Cooperative Rope Pulling</strong> — Two elephants must simultaneously pull both ends of a rope threaded through a sliding platform to bring a food reward within reach.</p>
+<p>If only one elephant pulls, the rope <strong>slips through</strong> and the trial fails. Elephants learn that a <em>partner is needed</em> — they wait for the second elephant to arrive before pulling, demonstrating goal-directed cooperation and an understanding of the partner's role.</p>
+<p>The <em>Wait Tolerance</em> slider controls how long the first elephant waits for the partner. Higher tolerance → more patience → higher success rate.</p>
+<p>This task demonstrates coalitions, alliances, and cooperative problem-solving — key components of elephant social cognition that parallel abilities seen in great apes.</p>
+<div class="legend-block">
+  <div class="legend-row"><span class="dot" style="background:#9ca3af"></span> Elephant</div>
+  <div class="legend-row"><span class="dot" style="background:#ef9f27"></span> Rope</div>
+  <div class="legend-row"><span class="dot" style="background:#4ade80"></span> Food reward</div>
+  <div class="legend-row"><span class="dot" style="background:#378add"></span> Success indicator</div>
+  <div class="legend-row"><span class="dot" style="background:#e24b4a"></span> Failure indicator</div>
+</div>`;
+
+  infoTexts["elephants:theory_of_mind:human_pointing"] = `<p><strong>Human Pointing Comprehension</strong> — A human experimenter points at one of two containers, one of which holds food. The elephant must use the pointing cue to choose the correct container.</p>
+<p>The simulation alternates between two conditions:</p>
+<p><strong>Facing:</strong> The human faces the elephant and points — elephants tend to approach the indicated container, suggesting sensitivity to communicative intent.</p>
+<p><strong>Turned away:</strong> The human faces away while pointing — elephants engage in fewer approach behaviors, suggesting they attend to the human's <em>attentional state</em>, not just the arm gesture.</p>
+<p style="margin-top:0.75rem; padding:0.5rem 0.75rem; background:rgba(239,159,39,0.1); border-left:2px solid #ef9f27; border-radius:3px; font-size:0.8125rem;"><strong>Note:</strong> Results are mixed. Some studies with African elephants found pointing comprehension, while others with Asian elephants did not — possibly reflecting methodological or species differences. There is currently <strong>no direct evidence</strong> for elephants' capacity to understand others' knowledge or beliefs, as no false-belief tests have been conducted.</p>
+<div class="legend-block">
+  <div class="legend-row"><span class="dot" style="background:#9ca3af"></span> Elephant</div>
+  <div class="legend-row"><span class="dot" style="background:#c8ccd8"></span> Human experimenter</div>
+  <div class="legend-row"><span class="dot" style="background:#ef9f27"></span> Pointing gesture</div>
+  <div class="legend-row"><span class="dot" style="background:#4ade80"></span> Correct choice</div>
+  <div class="legend-row"><span class="dot" style="background:#e24b4a"></span> Incorrect / no response</div>
 </div>`;
 
   function initState(key) {

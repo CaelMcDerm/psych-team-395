@@ -160,6 +160,46 @@ const Simulation = (() => {
       return;
     }
 
+    if (topic === "theory_of_mind" && species === "cooperative_pulling") {
+      pops[k] = {
+        kind: "coop_pull",
+        phase: "approach",
+        phaseT: 0,
+        trial: 0,
+        successes: 0, failures: 0,
+        history: [],
+        eAx: 0, eAy: 0, eBx: 0, eBy: 0,
+        eATargetX: 0, eBTargetX: 0,
+        platformX: 0, platformY: 0,
+        ropeOffset: 0,
+        aPulling: false, bPulling: false,
+        aArrived: false, bArrived: false,
+        bDelay: 0,
+        lastResult: null, resultTmr: 0,
+      };
+      resetCoopPositions(k);
+      return;
+    }
+
+    if (topic === "theory_of_mind" && species === "human_pointing") {
+      pops[k] = {
+        kind: "pointing",
+        phase: "setup",
+        phaseT: 0,
+        trial: 0,
+        condition: "facing",
+        targetSide: "left",
+        facingCorrect: 0, facingTotal: 0,
+        turnedCorrect: 0, turnedTotal: 0,
+        history: [],
+        elephantX: 0, elephantY: 0,
+        elephantTargetX: 0,
+        chosenSide: null,
+        lastResult: null, resultTmr: 0,
+      };
+      return;
+    }
+
     const s = AppState.getState(k);
     const cv = s.controls;
     const w = cw(), h = ch();
@@ -1548,6 +1588,643 @@ const Simulation = (() => {
     }
   }
 
+  // === Elephant Theory of Mind Simulations ===
+
+  function resetCoopPositions(k) {
+    const w = cw(), h = ch();
+    const pop = pops[k];
+    const cy = h * 0.5;
+    pop.platformX = w * 0.5;
+    pop.platformY = cy;
+    pop.eAx = w * 0.12; pop.eAy = cy;
+    pop.eBx = w * 0.88; pop.eBy = cy;
+    pop.eATargetX = pop.platformX - 80;
+    pop.eBTargetX = pop.platformX + 80;
+    pop.ropeOffset = 0;
+    pop.aPulling = false; pop.bPulling = false;
+    pop.aArrived = false; pop.bArrived = false;
+    pop.bDelay = 1.0 + Math.random() * 3.0;
+    pop.phase = "approach";
+    pop.phaseT = 0;
+  }
+
+  function drawElephant(x, y, facing, label) {
+    // facing: -1 = left, 1 = right
+    const f = facing;
+    // Body
+    ctx.beginPath();
+    ctx.ellipse(x, y, 28, 18, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "#8a8a8a"; ctx.fill();
+    ctx.strokeStyle = "#5a5a5a"; ctx.lineWidth = 2; ctx.stroke();
+    // Head
+    const hx = x + f * 26, hy = y - 6;
+    ctx.beginPath();
+    ctx.arc(hx, hy, 14, 0, Math.PI * 2);
+    ctx.fillStyle = "#9a9a9a"; ctx.fill();
+    ctx.strokeStyle = "#5a5a5a"; ctx.stroke();
+    // Ear
+    ctx.beginPath();
+    ctx.ellipse(hx - f * 8, hy - 4, 10, 14, f * 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = "#7a7a7a"; ctx.fill();
+    ctx.strokeStyle = "#5a5a5a"; ctx.lineWidth = 1.5; ctx.stroke();
+    // Eye
+    ctx.beginPath();
+    ctx.arc(hx + f * 6, hy - 3, 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#222"; ctx.fill();
+    ctx.beginPath();
+    ctx.arc(hx + f * 6.5, hy - 3.5, 0.8, 0, Math.PI * 2);
+    ctx.fillStyle = "#fff"; ctx.fill();
+    // Trunk
+    ctx.beginPath();
+    ctx.moveTo(hx + f * 12, hy + 4);
+    ctx.quadraticCurveTo(hx + f * 24, hy + 2, hx + f * 22, hy + 16);
+    ctx.quadraticCurveTo(hx + f * 18, hy + 22, hx + f * 14, hy + 18);
+    ctx.strokeStyle = "#7a7a7a"; ctx.lineWidth = 4; ctx.stroke();
+    ctx.strokeStyle = "#5a5a5a"; ctx.lineWidth = 1;
+    // Legs
+    const legPositions = [-14, -4, 8, 18];
+    legPositions.forEach(lx => {
+      ctx.beginPath();
+      ctx.moveTo(x + lx, y + 14); ctx.lineTo(x + lx, y + 30);
+      ctx.strokeStyle = "#6a6a6a"; ctx.lineWidth = 5; ctx.stroke();
+      ctx.strokeStyle = "#555"; ctx.lineWidth = 1;
+    });
+    // Tail
+    ctx.beginPath();
+    ctx.moveTo(x - f * 26, y - 2);
+    ctx.quadraticCurveTo(x - f * 38, y - 12, x - f * 36, y - 18);
+    ctx.strokeStyle = "#6a6a6a"; ctx.lineWidth = 2; ctx.stroke();
+    // Tusk
+    ctx.beginPath();
+    ctx.moveTo(hx + f * 6, hy + 8);
+    ctx.quadraticCurveTo(hx + f * 16, hy + 18, hx + f * 10, hy + 22);
+    ctx.strokeStyle = "#e8dcc8"; ctx.lineWidth = 2.5; ctx.stroke();
+    // Label
+    if (label) {
+      ctx.font = "bold 11px 'JetBrains Mono', monospace";
+      ctx.fillStyle = "#e1e4ed";
+      ctx.textAlign = "center";
+      ctx.fillText(label, x, y - 26);
+      ctx.textAlign = "left";
+    }
+  }
+
+  function drawPlatform(px, py, ropeOffset, w) {
+    // Platform (table)
+    const pw = 60, ph = 12;
+    ctx.fillStyle = "#5c4a2a"; ctx.fillRect(px - pw / 2, py - ph / 2, pw, ph);
+    ctx.strokeStyle = "#3a2e18"; ctx.lineWidth = 1.5;
+    ctx.strokeRect(px - pw / 2, py - ph / 2, pw, ph);
+    // Table legs
+    ctx.fillStyle = "#4a3a20";
+    ctx.fillRect(px - pw / 2 + 4, py + ph / 2, 4, 20);
+    ctx.fillRect(px + pw / 2 - 8, py + ph / 2, 4, 20);
+    // Food on platform
+    ctx.beginPath();
+    ctx.arc(px, py - 2, 8, 0, Math.PI * 2);
+    ctx.fillStyle = "#4ade80"; ctx.fill();
+    ctx.strokeStyle = "#22c55e"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.font = "10px sans-serif"; ctx.fillStyle = "#166534";
+    ctx.textAlign = "center"; ctx.fillText("🍎", px, py + 2); ctx.textAlign = "left";
+    // Rope through platform
+    const ropeY = py + 2;
+    ctx.beginPath();
+    ctx.moveTo(px - pw / 2 - 50 + ropeOffset, ropeY);
+    ctx.lineTo(px - pw / 2, ropeY);
+    ctx.moveTo(px + pw / 2, ropeY);
+    ctx.lineTo(px + pw / 2 + 50 - ropeOffset, ropeY);
+    ctx.strokeStyle = "#ef9f27"; ctx.lineWidth = 3;
+    ctx.setLineDash([6, 3]); ctx.stroke(); ctx.setLineDash([]);
+    // Rope ends (the parts elephants grab)
+    ctx.beginPath();
+    ctx.arc(px - pw / 2 - 50 + ropeOffset, ropeY, 4, 0, Math.PI * 2);
+    ctx.fillStyle = "#ef9f27"; ctx.fill();
+    ctx.beginPath();
+    ctx.arc(px + pw / 2 + 50 - ropeOffset, ropeY, 4, 0, Math.PI * 2);
+    ctx.fillStyle = "#ef9f27"; ctx.fill();
+  }
+
+  function drawCoopGraph(pop) {
+    const w = cw(), h = ch();
+    const hist = pop.history;
+    if (hist.length < 1) return;
+
+    const gW = 220, gH = 90;
+    const gx = w - gW - 20, gy = h - gH - 100;
+
+    ctx.fillStyle = "rgba(15,17,23,0.92)";
+    ctx.fillRect(gx - 12, gy - 24, gW + 24, gH + 48);
+    ctx.strokeStyle = "rgba(42,45,58,0.8)"; ctx.lineWidth = 0.5;
+    ctx.strokeRect(gx - 12, gy - 24, gW + 24, gH + 48);
+
+    ctx.font = "10px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+    ctx.fillText("Success rate / trial window", gx, gy - 10);
+
+    // Current stats
+    const total = Math.max(pop.trial, 1);
+    ctx.font = "11px 'JetBrains Mono', monospace"; ctx.fillStyle = "#e1e4ed";
+    ctx.fillText(`${Math.round(pop.successes / total * 100)}%`, gx + gW - 30, gy - 10);
+
+    ctx.strokeStyle = "#2a2d3a"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(gx, gy); ctx.lineTo(gx, gy + gH);
+    ctx.lineTo(gx + gW, gy + gH); ctx.stroke();
+
+    if (hist.length < 2) return;
+    const maxT = Math.max(hist.length - 1, 1);
+
+    // Success rate line
+    ctx.beginPath();
+    hist.forEach((pt, i) => {
+      const px = gx + (i / maxT) * gW;
+      const py = gy + gH - pt.rate * gH;
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    });
+    ctx.strokeStyle = "#4ade80"; ctx.lineWidth = 2; ctx.stroke();
+
+    // Dots
+    hist.forEach((pt, i) => {
+      const px = gx + (i / maxT) * gW;
+      const py = gy + gH - pt.rate * gH;
+      ctx.beginPath(); ctx.arc(px, py, pt.success ? 3 : 2, 0, Math.PI * 2);
+      ctx.fillStyle = pt.success ? "#4ade80" : "#ef4444"; ctx.fill();
+    });
+
+    // Legend
+    const ly = gy + gH + 12;
+    ctx.beginPath(); ctx.arc(gx + 4, ly, 3, 0, Math.PI * 2);
+    ctx.fillStyle = "#4ade80"; ctx.fill();
+    ctx.font = "9px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+    ctx.fillText("Success", gx + 10, ly + 3);
+    ctx.beginPath(); ctx.arc(gx + 70, ly, 3, 0, Math.PI * 2);
+    ctx.fillStyle = "#ef4444"; ctx.fill();
+    ctx.fillStyle = "#8b8fa3";
+    ctx.fillText("Failure", gx + 76, ly + 3);
+    ctx.fillText(`Trials: ${pop.trial}`, gx + 130, ly + 3);
+  }
+
+  function drawCoopPullSim(dt, key) {
+    const pop = pops[key];
+    if (!pop) return;
+    const w = cw(), h = ch();
+    const cv = AppState.getState(key).controls;
+    const speed = cv.trialSpeed;
+    const waitTol = cv.waitTolerance;
+
+    ctx.fillStyle = "#0f1117"; ctx.fillRect(0, 0, w, h);
+
+    // Ground
+    ctx.fillStyle = "#1a1a14";
+    ctx.fillRect(0, h * 0.78, w, h * 0.22);
+    ctx.strokeStyle = "#2a2a1a"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, h * 0.78); ctx.lineTo(w, h * 0.78); ctx.stroke();
+
+    pop.phaseT += dt * speed;
+
+    const cy = pop.platformY;
+    const approachSpeed = 120 * speed;
+
+    switch (pop.phase) {
+      case "approach": {
+        // Elephant A approaches steadily
+        if (!pop.aArrived) {
+          pop.eAx += approachSpeed * dt;
+          if (pop.eAx >= pop.eATargetX) { pop.eAx = pop.eATargetX; pop.aArrived = true; }
+        }
+        // Elephant B delays then approaches
+        if (pop.phaseT > pop.bDelay && !pop.bArrived) {
+          pop.eBx -= approachSpeed * dt;
+          if (pop.eBx <= pop.eBTargetX) { pop.eBx = pop.eBTargetX; pop.bArrived = true; }
+        }
+        // A waits at rope — if wait tolerance exceeded before B arrives, A pulls alone
+        if (pop.aArrived && !pop.bArrived && pop.phaseT > pop.bDelay + waitTol + 1) {
+          pop.phase = "pull_alone"; pop.phaseT = 0;
+        }
+        // Both arrived
+        if (pop.aArrived && pop.bArrived) {
+          pop.phase = "pull_together"; pop.phaseT = 0;
+        }
+        break;
+      }
+      case "pull_together": {
+        pop.aPulling = true; pop.bPulling = true;
+        pop.ropeOffset += 35 * speed * dt;
+        if (pop.ropeOffset >= 45) {
+          pop.phase = "result"; pop.phaseT = 0;
+          pop.trial++;
+          pop.successes++;
+          pop.lastResult = "✓ Cooperation successful!";
+          pop.resultTmr = 80;
+          const total = Math.max(pop.trial, 1);
+          pop.history.push({ trial: pop.trial, success: true, rate: pop.successes / total });
+          if (pop.history.length > 30) pop.history.shift();
+        }
+        break;
+      }
+      case "pull_alone": {
+        pop.aPulling = true; pop.bPulling = false;
+        // Rope slips — show it wiggling
+        pop.ropeOffset = Math.sin(pop.phaseT * 8) * 5;
+        if (pop.phaseT > 1.5) {
+          pop.phase = "result"; pop.phaseT = 0;
+          pop.trial++;
+          pop.failures++;
+          pop.lastResult = "✕ Rope slipped — partner needed!";
+          pop.resultTmr = 80;
+          const total = Math.max(pop.trial, 1);
+          pop.history.push({ trial: pop.trial, success: false, rate: pop.successes / total });
+          if (pop.history.length > 30) pop.history.shift();
+        }
+        break;
+      }
+      case "result": {
+        pop.aPulling = false; pop.bPulling = false;
+        if (pop.phaseT > 2.0) {
+          resetCoopPositions(key);
+        }
+        break;
+      }
+    }
+
+    // Draw platform and rope
+    drawPlatform(pop.platformX, pop.platformY, pop.ropeOffset, w);
+
+    // Draw elephants
+    drawElephant(pop.eAx, pop.eAy, 1, "Elephant A");
+    drawElephant(pop.eBx, pop.eBy, -1, "Elephant B");
+
+    // Pull indicators
+    if (pop.aPulling) {
+      ctx.font = "bold 11px 'JetBrains Mono', monospace";
+      ctx.fillStyle = "#ef9f27"; ctx.textAlign = "center";
+      ctx.fillText("← PULL", pop.eAx + 40, pop.eAy - 35);
+      ctx.textAlign = "left";
+    }
+    if (pop.bPulling) {
+      ctx.font = "bold 11px 'JetBrains Mono', monospace";
+      ctx.fillStyle = "#ef9f27"; ctx.textAlign = "center";
+      ctx.fillText("PULL →", pop.eBx - 40, pop.eBy - 35);
+      ctx.textAlign = "left";
+    }
+
+    // Waiting indicator
+    if (pop.aArrived && !pop.bArrived && pop.phase === "approach") {
+      const waitTime = pop.phaseT - (pop.bDelay > pop.phaseT ? 0 : pop.phaseT - pop.bDelay);
+      ctx.font = "10px 'JetBrains Mono', monospace";
+      ctx.fillStyle = "#ef9f27"; ctx.textAlign = "center";
+      ctx.fillText("waiting for partner...", pop.eAx, pop.eAy - 40);
+      ctx.textAlign = "left";
+    }
+
+    // B delay indicator
+    if (!pop.bArrived && pop.phaseT < pop.bDelay && pop.phase === "approach") {
+      ctx.font = "10px 'JetBrains Mono', monospace";
+      ctx.fillStyle = "#8b8fa3"; ctx.textAlign = "center";
+      ctx.fillText("(delayed start)", pop.eBx, pop.eBy - 40);
+      ctx.textAlign = "left";
+    }
+
+    // Draw graph
+    drawCoopGraph(pop);
+
+    // Result text
+    if (pop.resultTmr > 0) {
+      const al = Math.min(pop.resultTmr / 30, 1);
+      ctx.font = "bold 16px 'JetBrains Mono', monospace";
+      const isSuccess = pop.lastResult && pop.lastResult.startsWith("✓");
+      ctx.fillStyle = isSuccess
+        ? `rgba(74,222,128,${al})`
+        : `rgba(239,68,68,${al})`;
+      ctx.textAlign = "center";
+      ctx.fillText(pop.lastResult, w / 2, h * 0.15);
+      ctx.textAlign = "left";
+      pop.resultTmr--;
+    }
+
+    // Footer
+    ctx.font = "12px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+    ctx.fillText(`Cooperative Rope Pulling • Trial ${pop.trial} • Success: ${pop.successes}/${pop.trial}`, 14, h - 60);
+    // Progress bar
+    const phasePct = Math.min(pop.phaseT / 4, 1);
+    ctx.fillStyle = "#2a2d3a"; ctx.fillRect(14, h - 50, w - 28, 3);
+    ctx.fillStyle = "#ef9f27"; ctx.fillRect(14, h - 50, (w - 28) * phasePct, 3);
+  }
+
+  // === Human Pointing Simulation ===
+
+  function drawPointingHuman(x, y, facing, pointDir) {
+    // facing: 1 = toward elephant (right), -1 = away
+    const f = facing;
+    // Body
+    ctx.strokeStyle = "#c8ccd8"; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y + 4); ctx.lineTo(x, y + 42);
+    ctx.moveTo(x, y + 42); ctx.lineTo(x - 9, y + 64);
+    ctx.moveTo(x, y + 42); ctx.lineTo(x + 9, y + 64);
+    ctx.stroke();
+    // Arms — one pointing
+    ctx.beginPath();
+    ctx.moveTo(x, y + 16);
+    ctx.lineTo(x - 12, y + 32); // passive arm
+    ctx.stroke();
+    // Pointing arm
+    if (pointDir !== 0) {
+      const armEndX = x + pointDir * 35;
+      const armEndY = y + 10;
+      ctx.beginPath();
+      ctx.moveTo(x, y + 16);
+      ctx.lineTo(armEndX, armEndY);
+      ctx.strokeStyle = "#e1e4ed"; ctx.lineWidth = 2.5; ctx.stroke();
+      // Pointing hand
+      ctx.beginPath();
+      ctx.arc(armEndX, armEndY, 3, 0, Math.PI * 2);
+      ctx.fillStyle = "#e1e4ed"; ctx.fill();
+      // Pointing line (direction indicator)
+      ctx.beginPath();
+      ctx.moveTo(armEndX, armEndY);
+      ctx.lineTo(armEndX + pointDir * 40, armEndY - 5);
+      ctx.strokeStyle = "#ef9f27"; ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(x, y + 16);
+      ctx.lineTo(x + 12, y + 32);
+      ctx.strokeStyle = "#c8ccd8"; ctx.lineWidth = 2.5; ctx.stroke();
+    }
+    // Head
+    ctx.beginPath(); ctx.arc(x, y - 8, 11, 0, Math.PI * 2);
+    ctx.fillStyle = "#e1e4ed"; ctx.fill();
+    // Face direction indicator
+    const ex = x + f * 7;
+    ctx.beginPath(); ctx.arc(ex, y - 9, 2.2, 0, Math.PI * 2);
+    ctx.fillStyle = "#0f1117"; ctx.fill();
+    // Nose line
+    ctx.beginPath();
+    ctx.moveTo(x, y - 8);
+    ctx.lineTo(x + f * 13, y - 8);
+    ctx.strokeStyle = "#8b8fa3"; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+
+  function drawContainer(x, y, hasFood, chosen, correct) {
+    // Container (bucket)
+    ctx.beginPath();
+    ctx.moveTo(x - 14, y - 12);
+    ctx.lineTo(x + 14, y - 12);
+    ctx.lineTo(x + 10, y + 12);
+    ctx.lineTo(x - 10, y + 12);
+    ctx.closePath();
+    ctx.fillStyle = chosen ? (correct ? "rgba(74,222,128,0.3)" : "rgba(239,68,68,0.3)") : "#2a2d3a";
+    ctx.fill();
+    ctx.strokeStyle = chosen ? (correct ? "#4ade80" : "#ef4444") : "#555";
+    ctx.lineWidth = 2; ctx.stroke();
+    // Food inside (if revealed)
+    if (hasFood && chosen) {
+      ctx.font = "14px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("🍎", x, y + 4); ctx.textAlign = "left";
+    }
+    // Question mark if not chosen
+    if (!chosen) {
+      ctx.font = "bold 14px 'JetBrains Mono', monospace";
+      ctx.fillStyle = "#555"; ctx.textAlign = "center";
+      ctx.fillText("?", x, y + 4); ctx.textAlign = "left";
+    }
+  }
+
+  function drawSmallElephant(x, y, facing) {
+    const f = facing;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 20, 12, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "#8a8a8a"; ctx.fill();
+    ctx.strokeStyle = "#5a5a5a"; ctx.lineWidth = 1.5; ctx.stroke();
+    // Head
+    const hx = x + f * 18, hy = y - 4;
+    ctx.beginPath(); ctx.arc(hx, hy, 10, 0, Math.PI * 2);
+    ctx.fillStyle = "#9a9a9a"; ctx.fill();
+    ctx.strokeStyle = "#5a5a5a"; ctx.stroke();
+    // Ear
+    ctx.beginPath();
+    ctx.ellipse(hx - f * 5, hy - 2, 7, 10, f * 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = "#7a7a7a"; ctx.fill();
+    ctx.strokeStyle = "#5a5a5a"; ctx.stroke();
+    // Eye
+    ctx.beginPath(); ctx.arc(hx + f * 4, hy - 2, 1.8, 0, Math.PI * 2);
+    ctx.fillStyle = "#222"; ctx.fill();
+    // Trunk
+    ctx.beginPath();
+    ctx.moveTo(hx + f * 8, hy + 3);
+    ctx.quadraticCurveTo(hx + f * 16, hy + 1, hx + f * 14, hy + 12);
+    ctx.strokeStyle = "#7a7a7a"; ctx.lineWidth = 3; ctx.stroke();
+    // Legs
+    [-10, -3, 5, 12].forEach(lx => {
+      ctx.beginPath();
+      ctx.moveTo(x + lx, y + 10); ctx.lineTo(x + lx, y + 20);
+      ctx.strokeStyle = "#6a6a6a"; ctx.lineWidth = 3.5; ctx.stroke();
+    });
+  }
+
+  function drawPointingGraph(pop) {
+    const w = cw(), h = ch();
+    const gW = 220, gH = 100;
+    const gx = w - gW - 20, gy = h - gH - 100;
+
+    ctx.fillStyle = "rgba(15,17,23,0.92)";
+    ctx.fillRect(gx - 12, gy - 24, gW + 24, gH + 52);
+    ctx.strokeStyle = "rgba(42,45,58,0.8)"; ctx.lineWidth = 0.5;
+    ctx.strokeRect(gx - 12, gy - 24, gW + 24, gH + 52);
+
+    ctx.font = "10px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+    ctx.fillText("Accuracy by condition", gx, gy - 10);
+
+    // Bar chart: facing vs turned away
+    const barW = 70, barH = gH - 10;
+    const facingRate = pop.facingTotal ? pop.facingCorrect / pop.facingTotal : 0;
+    const turnedRate = pop.turnedTotal ? pop.turnedCorrect / pop.turnedTotal : 0;
+
+    // Facing bar
+    const b1x = gx + 30;
+    ctx.fillStyle = "#2a2d3a";
+    ctx.fillRect(b1x, gy, barW, barH);
+    ctx.fillStyle = "#4ade80";
+    ctx.fillRect(b1x, gy + barH - facingRate * barH, barW, facingRate * barH);
+    ctx.strokeStyle = "#333"; ctx.lineWidth = 1;
+    ctx.strokeRect(b1x, gy, barW, barH);
+
+    // Turned away bar
+    const b2x = gx + 120;
+    ctx.fillStyle = "#2a2d3a";
+    ctx.fillRect(b2x, gy, barW, barH);
+    ctx.fillStyle = "#ef9f27";
+    ctx.fillRect(b2x, gy + barH - turnedRate * barH, barW, turnedRate * barH);
+    ctx.strokeStyle = "#333"; ctx.lineWidth = 1;
+    ctx.strokeRect(b2x, gy, barW, barH);
+
+    // Labels
+    ctx.font = "9px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+    ctx.textAlign = "center";
+    ctx.fillText("Facing", b1x + barW / 2, gy + barH + 12);
+    ctx.fillText(`${Math.round(facingRate * 100)}%`, b1x + barW / 2, gy + barH + 23);
+    ctx.fillText(`(n=${pop.facingTotal})`, b1x + barW / 2, gy + barH + 33);
+    ctx.fillText("Turned", b2x + barW / 2, gy + barH + 12);
+    ctx.fillText(`${Math.round(turnedRate * 100)}%`, b2x + barW / 2, gy + barH + 23);
+    ctx.fillText(`(n=${pop.turnedTotal})`, b2x + barW / 2, gy + barH + 33);
+    ctx.textAlign = "left";
+
+    // Y axis
+    ctx.fillStyle = "#555"; ctx.font = "8px 'JetBrains Mono', monospace";
+    ctx.fillText("100%", gx, gy + 6);
+    ctx.fillText("50%", gx + 2, gy + barH / 2 + 3);
+    // 50% line (chance level)
+    ctx.beginPath();
+    ctx.moveTo(gx + 28, gy + barH / 2);
+    ctx.lineTo(gx + gW, gy + barH / 2);
+    ctx.strokeStyle = "#555"; ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = "#555";
+    ctx.fillText("chance", gx + gW - 36, gy + barH / 2 - 4);
+  }
+
+  function drawPointingSim(dt, key) {
+    const pop = pops[key];
+    if (!pop) return;
+    const w = cw(), h = ch();
+    const cv = AppState.getState(key).controls;
+    const speed = cv.trialSpeed;
+
+    ctx.fillStyle = "#0f1117"; ctx.fillRect(0, 0, w, h);
+
+    // Ground
+    ctx.fillStyle = "#1a1a14";
+    ctx.fillRect(0, h * 0.78, w, h * 0.22);
+    ctx.strokeStyle = "#2a2a1a"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, h * 0.78); ctx.lineTo(w, h * 0.78); ctx.stroke();
+
+    // Scene layout
+    const humanX = w * 0.35, humanY = h * 0.38;
+    const contLeftX = w * 0.15, contRightX = w * 0.55;
+    const contY = h * 0.55;
+    const elephantStartX = w * 0.7, elephantBaseY = h * 0.52;
+
+    pop.phaseT += dt * speed;
+
+    const isFacing = pop.condition === "facing";
+    const pointDir = pop.targetSide === "left" ? -1 : 1;
+
+    switch (pop.phase) {
+      case "setup": {
+        pop.elephantX = elephantStartX;
+        pop.elephantY = elephantBaseY;
+        pop.targetSide = Math.random() < 0.5 ? "left" : "right";
+        pop.condition = pop.trial % 2 === 0 ? "facing" : "turned_away";
+        pop.chosenSide = null;
+        if (pop.phaseT > 1.0) { pop.phase = "point"; pop.phaseT = 0; }
+        break;
+      }
+      case "point": {
+        // Human points, wait for elephant response
+        if (pop.phaseT > 2.0) {
+          pop.phase = "response"; pop.phaseT = 0;
+          // Decide elephant's choice
+          if (pop.condition === "facing") {
+            // ~75% follow pointing when human faces them
+            pop.chosenSide = Math.random() < 0.75 ? pop.targetSide : (pop.targetSide === "left" ? "right" : "left");
+          } else {
+            // ~45% when turned away — near chance
+            pop.chosenSide = Math.random() < 0.45 ? pop.targetSide : (pop.targetSide === "left" ? "right" : "left");
+          }
+          pop.elephantTargetX = pop.chosenSide === "left" ? contLeftX + 40 : contRightX + 40;
+        }
+        break;
+      }
+      case "response": {
+        // Elephant walks toward chosen container
+        const dx = pop.elephantTargetX - pop.elephantX;
+        const targetY = contY + 5;
+        const dy = targetY - pop.elephantY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 5) {
+          pop.elephantX += (dx / dist) * 80 * speed * dt;
+          pop.elephantY += (dy / dist) * 80 * speed * dt;
+        } else {
+          pop.phase = "result"; pop.phaseT = 0;
+          pop.trial++;
+          const correct = pop.chosenSide === pop.targetSide;
+          if (pop.condition === "facing") {
+            pop.facingTotal++;
+            if (correct) pop.facingCorrect++;
+          } else {
+            pop.turnedTotal++;
+            if (correct) pop.turnedCorrect++;
+          }
+          pop.lastResult = correct ? "✓ Correct container!" : "✕ Wrong container";
+          pop.resultTmr = 70;
+        }
+        break;
+      }
+      case "result": {
+        if (pop.phaseT > 2.5) {
+          pop.phase = "setup"; pop.phaseT = 0;
+        }
+        break;
+      }
+    }
+
+    // Condition label
+    ctx.font = "bold 13px 'JetBrains Mono', monospace";
+    ctx.fillStyle = isFacing ? "#4ade80" : "#ef9f27";
+    ctx.textAlign = "center";
+    ctx.fillText(isFacing ? "FACING CONDITION" : "TURNED-AWAY CONDITION", w * 0.35, h * 0.1);
+    ctx.font = "10px 'JetBrains Mono', monospace";
+    ctx.fillStyle = "#8b8fa3";
+    ctx.fillText(isFacing ? "Human faces elephant and points" : "Human faces away while pointing", w * 0.35, h * 0.14);
+    ctx.textAlign = "left";
+
+    // Draw containers
+    const showResult = pop.phase === "result";
+    drawContainer(contLeftX, contY, pop.targetSide === "left",
+      showResult && pop.chosenSide === "left", showResult && pop.chosenSide === "left" && pop.targetSide === "left");
+    drawContainer(contRightX, contY, pop.targetSide === "right",
+      showResult && pop.chosenSide === "right", showResult && pop.chosenSide === "right" && pop.targetSide === "right");
+
+    // Container labels
+    ctx.font = "9px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+    ctx.textAlign = "center";
+    ctx.fillText("Container A", contLeftX, contY + 22);
+    ctx.fillText("Container B", contRightX, contY + 22);
+    ctx.textAlign = "left";
+
+    // Draw human
+    const humanFacing = isFacing ? 1 : -1;
+    const showPointing = pop.phase === "point" || pop.phase === "response" || pop.phase === "result";
+    drawPointingHuman(humanX, humanY, humanFacing, showPointing ? pointDir : 0);
+
+    // Draw elephant
+    drawSmallElephant(pop.elephantX, pop.elephantY, -1);
+
+    // Draw graph
+    drawPointingGraph(pop);
+
+    // Result text
+    if (pop.resultTmr > 0) {
+      const al = Math.min(pop.resultTmr / 30, 1);
+      ctx.font = "bold 16px 'JetBrains Mono', monospace";
+      const isCorrect = pop.lastResult && pop.lastResult.startsWith("✓");
+      ctx.fillStyle = isCorrect
+        ? `rgba(74,222,128,${al})`
+        : `rgba(239,68,68,${al})`;
+      ctx.textAlign = "center";
+      ctx.fillText(pop.lastResult, w * 0.4, h * 0.22);
+      ctx.textAlign = "left";
+      pop.resultTmr--;
+    }
+
+    // Footer
+    ctx.font = "12px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+    ctx.fillText(`Human Pointing • Trial ${pop.trial} • Facing: ${pop.facingCorrect}/${pop.facingTotal} • Turned: ${pop.turnedCorrect}/${pop.turnedTotal}`, 14, h - 60);
+    const phasePct = Math.min(pop.phaseT / 3, 1);
+    ctx.fillStyle = "#2a2d3a"; ctx.fillRect(14, h - 50, w - 28, 3);
+    ctx.fillStyle = "#9FE1CB"; ctx.fillRect(14, h - 50, (w - 28) * phasePct, 3);
+  }
+
   // Renderer registry — maps key patterns to render functions.
   const renderers = {
     "chimps_bonobos:aggression:chimpanzees": drawAggressionSim,
@@ -1557,6 +2234,8 @@ const Simulation = (() => {
     "dogs_wolves:gaze_following:dogs": drawGazeSim,
     "dogs_wolves:gaze_following:wolves": drawGazeSim,
     "humans:self_domestication:humans": drawSelfDomSim,
+    "elephants:theory_of_mind:cooperative_pulling": drawCoopPullSim,
+    "elephants:theory_of_mind:human_pointing": drawPointingSim,
   };
 
   function getRenderer(key) {
