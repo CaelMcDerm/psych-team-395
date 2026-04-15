@@ -770,15 +770,24 @@ const Simulation = (() => {
   }
 
   function drawTarget(tx, ty) {
-    // Cup / treat
+    // Outer ring
     ctx.beginPath();
-    ctx.moveTo(tx - 9, ty - 8);
-    ctx.lineTo(tx + 9, ty - 8);
-    ctx.lineTo(tx + 6, ty + 9);
-    ctx.lineTo(tx - 6, ty + 9);
-    ctx.closePath();
+    ctx.arc(tx, ty, 14, 0, Math.PI * 2);
     ctx.fillStyle = "#e24b4a"; ctx.fill();
-    ctx.strokeStyle = "#7a1f1f"; ctx.lineWidth = 1.5; ctx.stroke();
+    // Middle white ring
+    ctx.beginPath();
+    ctx.arc(tx, ty, 9, 0, Math.PI * 2);
+    ctx.fillStyle = "#e1e4ed"; ctx.fill();
+    // Inner bullseye
+    ctx.beginPath();
+    ctx.arc(tx, ty, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#e24b4a"; ctx.fill();
+    // Crosshair lines
+    ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(tx - 18, ty); ctx.lineTo(tx + 18, ty);
+    ctx.moveTo(tx, ty - 18); ctx.lineTo(tx, ty + 18);
+    ctx.stroke();
   }
 
   function drawGazeCone(ox, oy, angle, length, opacity, color) {
@@ -2168,37 +2177,7 @@ const Simulation = (() => {
     }
   }
 
-  function drawSmallElephant(x, y, facing) {
-    const f = facing;
-    ctx.beginPath();
-    ctx.ellipse(x, y, 20, 12, 0, 0, Math.PI * 2);
-    ctx.fillStyle = "#8a8a8a"; ctx.fill();
-    ctx.strokeStyle = "#5a5a5a"; ctx.lineWidth = 1.5; ctx.stroke();
-    // Head
-    const hx = x + f * 18, hy = y - 4;
-    ctx.beginPath(); ctx.arc(hx, hy, 10, 0, Math.PI * 2);
-    ctx.fillStyle = "#9a9a9a"; ctx.fill();
-    ctx.strokeStyle = "#5a5a5a"; ctx.stroke();
-    // Ear
-    ctx.beginPath();
-    ctx.ellipse(hx - f * 5, hy - 2, 7, 10, f * 0.3, 0, Math.PI * 2);
-    ctx.fillStyle = "#7a7a7a"; ctx.fill();
-    ctx.strokeStyle = "#5a5a5a"; ctx.stroke();
-    // Eye
-    ctx.beginPath(); ctx.arc(hx + f * 4, hy - 2, 1.8, 0, Math.PI * 2);
-    ctx.fillStyle = "#222"; ctx.fill();
-    // Trunk
-    ctx.beginPath();
-    ctx.moveTo(hx + f * 8, hy + 3);
-    ctx.quadraticCurveTo(hx + f * 16, hy + 1, hx + f * 14, hy + 12);
-    ctx.strokeStyle = "#7a7a7a"; ctx.lineWidth = 3; ctx.stroke();
-    // Legs
-    [-10, -3, 5, 12].forEach(lx => {
-      ctx.beginPath();
-      ctx.moveTo(x + lx, y + 10); ctx.lineTo(x + lx, y + 20);
-      ctx.strokeStyle = "#6a6a6a"; ctx.lineWidth = 3.5; ctx.stroke();
-    });
-  }
+
 
   function drawPointingGraph(pop) {
     const w = cw(), h = ch();
@@ -2376,7 +2355,7 @@ const Simulation = (() => {
     drawPointingHuman(humanX, humanY, humanFacing, showPointing ? pointDir : 0);
 
     // Draw elephant
-    drawSmallElephant(pop.elephantX, pop.elephantY, -1);
+    drawElephant(pop.elephantX, pop.elephantY, -1, null);
 
     // Draw graph
     drawPointingGraph(pop);
