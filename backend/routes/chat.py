@@ -1,3 +1,4 @@
+import json
 import requests
 from flask import Blueprint, jsonify, request
 
@@ -32,12 +33,35 @@ def call_local_api(history: list[dict], system_prompt: str) -> str:
     body = {
         "model": config.LOCAL_MODEL,
         "messages": messages,
-        "stream": False,
+        "stream": True,
+        "options": {
+            "num_ctx": config.LOCAL_NUM_CTX,
+            "num_predict": config.LOCAL_NUM_PREDICT,
+            "temperature": 0.7,
+        },
     }
-    resp = requests.post(config.LOCAL_API_URL, json=body, timeout=120)
+    # Use streaming so individual chunk reads won't time out even on
+    # slow hardware.  The connect timeout is short; the *read* timeout
+    # is generous to allow for the initial model-load / prompt-eval.
+    resp = requests.post(
+        config.LOCAL_API_URL,
+        json=body,
+        timeout=(10, 300),   # (connect, read) — per-chunk read timeout
+        stream=True,
+    )
     resp.raise_for_status()
-    data = resp.json()
-    return data["message"]["content"]
+
+    chunks: list[str] = []
+    for line in resp.iter_lines():
+        if not line:
+            continue
+        data = json.loads(line)
+        token = data.get("message", {}).get("content", "")
+        if token:
+            chunks.append(token)
+        if data.get("done"):
+            break
+    return "".join(chunks)
 
 
 @chat_bp.route("/api/chat", methods=["POST"])
