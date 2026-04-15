@@ -830,46 +830,92 @@ const Simulation = (() => {
   // === Culture simulation (vervet monkeys — normative vs cumulative) ===
 
   function drawMonkey(x, y, cracking) {
-    // Body
+    // Tail (drawn first so it sits behind the body)
     ctx.beginPath();
-    ctx.ellipse(x, y, 10, 8, 0, 0, Math.PI * 2);
-    ctx.fillStyle = "#7a8a6e"; ctx.fill();
-    ctx.strokeStyle = "#4a5a3e"; ctx.lineWidth = 1.5; ctx.stroke();
-    // Head
+    ctx.moveTo(x + 9, y);
+    ctx.bezierCurveTo(x + 24, y - 4, x + 28, y - 20, x + 18, y - 30);
+    ctx.strokeStyle = "#5a6e4a"; ctx.lineWidth = 2; ctx.stroke();
+
+    // Body — grey-green
     ctx.beginPath();
-    ctx.arc(x - 9, y - 5, 6, 0, Math.PI * 2);
-    ctx.fillStyle = "#c2b8a0"; ctx.fill();
-    ctx.strokeStyle = "#4a5a3e"; ctx.stroke();
-    // Face
-    ctx.beginPath(); ctx.arc(x - 11, y - 6, 1.5, 0, Math.PI * 2);
-    ctx.fillStyle = "#222"; ctx.fill();
-    // Tail
+    ctx.ellipse(x, y, 11, 9, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "#7d9070"; ctx.fill();
+    ctx.strokeStyle = "#4a5a3e"; ctx.lineWidth = 1; ctx.stroke();
+
+    // Cream underside
     ctx.beginPath();
-    ctx.moveTo(x + 9, y - 2);
-    ctx.quadraticCurveTo(x + 20, y - 14, x + 16, y - 20);
-    ctx.strokeStyle = "#4a5a3e"; ctx.lineWidth = 1.5; ctx.stroke();
-    // Arms — if cracking, show motion
-    if (cracking > 0) {
-      const lift = Math.sin(cracking * 8) * 6;
-      ctx.beginPath();
-      ctx.moveTo(x - 5, y + 3); ctx.lineTo(x - 12, y + 10 + lift);
-      ctx.moveTo(x + 3, y + 5); ctx.lineTo(x + 2, y + 14);
-      ctx.strokeStyle = "#4a5a3e"; ctx.lineWidth = 1.5; ctx.stroke();
-      // Rock in hand
-      ctx.beginPath();
-      ctx.arc(x - 12, y + 10 + lift, 3, 0, Math.PI * 2);
-      ctx.fillStyle = "#888"; ctx.fill();
-    } else {
-      ctx.beginPath();
-      ctx.moveTo(x - 5, y + 3); ctx.lineTo(x - 8, y + 12);
-      ctx.moveTo(x + 3, y + 5); ctx.lineTo(x + 2, y + 14);
-      ctx.strokeStyle = "#4a5a3e"; ctx.lineWidth = 1.5; ctx.stroke();
-    }
+    ctx.ellipse(x + 1, y + 1, 6, 5.5, 0.2, 0, Math.PI * 2);
+    ctx.fillStyle = "#d4c9a8"; ctx.fill();
+
+    // White facial fringe — distinctive vervet ring around the face
+    ctx.beginPath();
+    ctx.arc(x - 10, y - 6, 8.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#e8e0c8"; ctx.fill();
+
+    // Head — black face mask
+    ctx.beginPath();
+    ctx.arc(x - 10, y - 6, 6.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#1a1a1a"; ctx.fill();
+    ctx.strokeStyle = "#333"; ctx.lineWidth = 0.8; ctx.stroke();
+
+    // Ears
+    ctx.beginPath();
+    ctx.arc(x - 4, y - 12, 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#c4a882"; ctx.fill();
+    ctx.strokeStyle = "#4a5a3e"; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x - 16, y - 12, 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#c4a882"; ctx.fill();
+    ctx.strokeStyle = "#4a5a3e"; ctx.lineWidth = 0.8; ctx.stroke();
+
+    // Eyes — amber/yellow irises on the black face
+    ctx.beginPath(); ctx.arc(x - 8, y - 7, 1.8, 0, Math.PI * 2);
+    ctx.fillStyle = "#c8a030"; ctx.fill();
+    ctx.beginPath(); ctx.arc(x - 13, y - 7, 1.8, 0, Math.PI * 2);
+    ctx.fillStyle = "#c8a030"; ctx.fill();
+    // Pupils
+    ctx.beginPath(); ctx.arc(x - 8, y - 7, 0.9, 0, Math.PI * 2);
+    ctx.fillStyle = "#080808"; ctx.fill();
+    ctx.beginPath(); ctx.arc(x - 13, y - 7, 0.9, 0, Math.PI * 2);
+    ctx.fillStyle = "#080808"; ctx.fill();
+
     // Legs
     ctx.beginPath();
-    ctx.moveTo(x - 4, y + 7); ctx.lineTo(x - 7, y + 17);
-    ctx.moveTo(x + 4, y + 7); ctx.lineTo(x + 7, y + 17);
-    ctx.strokeStyle = "#4a5a3e"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.moveTo(x - 4, y + 8); ctx.lineTo(x - 7, y + 18);
+    ctx.moveTo(x + 4, y + 8); ctx.lineTo(x + 7, y + 18);
+    ctx.strokeStyle = "#4a5a3e"; ctx.lineWidth = 2; ctx.stroke();
+    // Feet
+    ctx.beginPath();
+    ctx.ellipse(x - 7, y + 19, 3, 1.5, -0.3, 0, Math.PI * 2);
+    ctx.fillStyle = "#c4a882"; ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x + 7, y + 19, 3, 1.5, 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = "#c4a882"; ctx.fill();
+
+    // Arms — if cracking, raise left arm with rock, place walnut on ground
+    if (cracking > 0) {
+      const lift = Math.sin(cracking * 8) * 7;
+      // Right arm resting
+      ctx.beginPath();
+      ctx.moveTo(x + 3, y + 4); ctx.lineTo(x + 6, y + 13);
+      ctx.strokeStyle = "#4a5a3e"; ctx.lineWidth = 2; ctx.stroke();
+      // Left arm raised
+      ctx.beginPath();
+      ctx.moveTo(x - 5, y + 2); ctx.lineTo(x - 13, y + 10 + lift);
+      ctx.strokeStyle = "#4a5a3e"; ctx.lineWidth = 2; ctx.stroke();
+      // Rock in hand
+      ctx.beginPath();
+      ctx.arc(x - 13, y + 10 + lift, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = "#9a9a9a"; ctx.fill();
+      ctx.strokeStyle = "#666"; ctx.lineWidth = 0.8; ctx.stroke();
+      // Walnut on the ground below the raised arm
+      drawWalnut(x - 13, y + 17, false);
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(x - 5, y + 2); ctx.lineTo(x - 9, y + 12);
+      ctx.moveTo(x + 3, y + 4); ctx.lineTo(x + 6, y + 13);
+      ctx.strokeStyle = "#4a5a3e"; ctx.lineWidth = 2; ctx.stroke();
+    }
   }
 
   function drawWalnut(x, y, cracked) {
@@ -1025,9 +1071,9 @@ const Simulation = (() => {
       const m = pop.monkeys[Math.floor(Math.random() * pop.monkeys.length)];
       if (m.cracking <= 0) {
         m.cracking = 1.5;
-        // Add a crack event near the monkey
+        // Add a crack event at the walnut position on the ground (foot level)
         pop.crackEvents.push({
-          x: m.x + 5, y: m.y + 14,
+          x: m.x - 12, y: m.y + 17,
           t: 1.0,
         });
       }
