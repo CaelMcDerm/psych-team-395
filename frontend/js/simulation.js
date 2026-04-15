@@ -594,47 +594,179 @@ const Simulation = (() => {
   }
 
   function drawCanid(x, y, headAngle, species) {
-    const bodyCol = species === "dogs" ? "#d8b48a" : "#9aa1ad";
-    const outline = species === "dogs" ? "#8a6f4f" : "#5c6270";
-    // Body ellipse
-    ctx.beginPath();
-    ctx.ellipse(x, y, 18, 9, 0, 0, Math.PI * 2);
-    ctx.fillStyle = bodyCol; ctx.fill();
-    ctx.strokeStyle = outline; ctx.lineWidth = 1.5; ctx.stroke();
-    // Legs
-    ctx.beginPath();
-    ctx.moveTo(x - 11, y + 6); ctx.lineTo(x - 11, y + 16);
-    ctx.moveTo(x - 5, y + 8);  ctx.lineTo(x - 5, y + 17);
-    ctx.moveTo(x + 5, y + 8);  ctx.lineTo(x + 5, y + 17);
-    ctx.moveTo(x + 11, y + 6); ctx.lineTo(x + 11, y + 16);
-    ctx.stroke();
-    // Tail (wolves: straight, dogs: curled up)
-    ctx.beginPath();
     if (species === "dogs") {
-      ctx.moveTo(x + 16, y - 1);
-      ctx.quadraticCurveTo(x + 24, y - 12, x + 18, y - 16);
+      // === Dog — golden/tan, round-headed, floppy-eared ===
+
+      // Body
+      ctx.beginPath();
+      ctx.ellipse(x, y, 17, 10, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "#d8b070"; ctx.fill();
+      ctx.strokeStyle = "#8a6f4f"; ctx.lineWidth = 1.5; ctx.stroke();
+
+      // Cream underside
+      ctx.beginPath();
+      ctx.ellipse(x, y + 2, 11, 6, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "#e8c898"; ctx.fill();
+
+      // Curly tail — bezier looping up over the back
+      ctx.beginPath();
+      ctx.moveTo(x + 15, y - 1);
+      ctx.bezierCurveTo(x + 26, y - 6, x + 28, y - 20, x + 19, y - 22);
+      ctx.strokeStyle = "#8a6f4f"; ctx.lineWidth = 2.5; ctx.stroke();
+
+      // Legs with rounded paws
+      [[-11, 5], [-5, 8], [5, 8], [11, 5]].forEach(([dx, dy]) => {
+        ctx.beginPath();
+        ctx.moveTo(x + dx, y + dy); ctx.lineTo(x + dx, y + dy + 11);
+        ctx.strokeStyle = "#8a6f4f"; ctx.lineWidth = 2; ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(x + dx, y + dy + 13, 3.5, 2, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "#c49a6a"; ctx.fill();
+        ctx.strokeStyle = "#8a6f4f"; ctx.lineWidth = 0.8; ctx.stroke();
+      });
+
+      // Head position (keep same offset as original so gaze overlays stay aligned)
+      const hx = x + Math.cos(headAngle) * 16;
+      const hy = y + Math.sin(headAngle) * 6 - 2;
+
+      // Back floppy ear (drawn behind head)
+      ctx.beginPath();
+      ctx.ellipse(hx - Math.cos(headAngle) * 5, hy + 3, 4, 8, Math.cos(headAngle) * 0.3, 0, Math.PI * 2);
+      ctx.fillStyle = "#c49a6a"; ctx.fill();
+      ctx.strokeStyle = "#8a6f4f"; ctx.lineWidth = 1; ctx.stroke();
+
+      // Head — round
+      ctx.beginPath();
+      ctx.arc(hx, hy, 9, 0, Math.PI * 2);
+      ctx.fillStyle = "#d8b070"; ctx.fill();
+      ctx.strokeStyle = "#8a6f4f"; ctx.lineWidth = 1.5; ctx.stroke();
+
+      // Front floppy ear (overlaps head edge slightly)
+      ctx.beginPath();
+      ctx.ellipse(hx + Math.cos(headAngle) * 5, hy + 3, 4, 8, -Math.cos(headAngle) * 0.3, 0, Math.PI * 2);
+      ctx.fillStyle = "#c49a6a"; ctx.fill();
+      ctx.strokeStyle = "#8a6f4f"; ctx.lineWidth = 1; ctx.stroke();
+
+      // Muzzle
+      ctx.beginPath();
+      ctx.ellipse(hx + Math.cos(headAngle) * 6, hy + 1, 5, 3.5, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "#e8c898"; ctx.fill();
+      ctx.strokeStyle = "#8a6f4f"; ctx.lineWidth = 0.8; ctx.stroke();
+
+      // Nose
+      ctx.beginPath();
+      ctx.ellipse(hx + Math.cos(headAngle) * 10, hy + 1, 2.5, 1.8, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "#1a0a00"; ctx.fill();
+
+      // Big cute eye with shine
+      const ex = hx + Math.cos(headAngle) * 3;
+      const ey = hy - 2;
+      ctx.beginPath(); ctx.arc(ex, ey, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = "#3d2510"; ctx.fill();
+      ctx.strokeStyle = "#8a6f4f"; ctx.lineWidth = 0.5; ctx.stroke();
+      ctx.beginPath(); ctx.arc(ex + 1.3, ey - 1.3, 1.2, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,255,255,0.75)"; ctx.fill();
+
     } else {
-      ctx.moveTo(x + 16, y + 2);
-      ctx.lineTo(x + 28, y + 6);
+      // === Wolf — grey, lean, erect ears, neutral/wary expression ===
+      const bodyCol = "#8a9199";
+      const outline = "#4a5060";
+
+      // Body — longer and leaner than dog
+      ctx.beginPath();
+      ctx.ellipse(x, y, 19, 9, 0, 0, Math.PI * 2);
+      ctx.fillStyle = bodyCol; ctx.fill();
+      ctx.strokeStyle = outline; ctx.lineWidth = 1.5; ctx.stroke();
+
+      // Tail and saddle sit on the opposite side from the head
+      const td = Math.cos(headAngle) >= 0 ? -1 : 1;
+
+      // Darker saddle/back marking
+      ctx.beginPath();
+      ctx.ellipse(x + td * 2, y - 3, 12, 5, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "#6a7278"; ctx.fill();
+
+      // Tail — low and straight, carried level (not curled)
+      ctx.beginPath();
+      ctx.moveTo(x + td * 17, y + 2);
+      ctx.bezierCurveTo(x + td * 26, y + 4, x + td * 32, y + 6, x + td * 34, y + 8);
+      ctx.strokeStyle = outline; ctx.lineWidth = 2.5; ctx.stroke();
+
+      // Legs — longer, no paws (wolves look rangier)
+      ctx.beginPath();
+      ctx.moveTo(x - 11, y + 6); ctx.lineTo(x - 11, y + 19);
+      ctx.moveTo(x - 5,  y + 8); ctx.lineTo(x - 5,  y + 20);
+      ctx.moveTo(x + 5,  y + 8); ctx.lineTo(x + 5,  y + 20);
+      ctx.moveTo(x + 11, y + 6); ctx.lineTo(x + 11, y + 19);
+      ctx.strokeStyle = outline; ctx.lineWidth = 2; ctx.stroke();
+
+      // Head
+      const hx = x + Math.cos(headAngle) * 16;
+      const hy = y + Math.sin(headAngle) * 6 - 2;
+
+      // Head — elongated ellipse aligned to headAngle
+      ctx.beginPath();
+      ctx.ellipse(hx, hy, 9, 6.5, headAngle, 0, Math.PI * 2);
+      ctx.fillStyle = bodyCol; ctx.fill();
+      ctx.strokeStyle = outline; ctx.lineWidth = 1.5; ctx.stroke();
+
+      // Erect triangular ears
+      const earBase = 5;
+      const earH = 9;
+      // Back ear
+      const be1x = hx - Math.cos(headAngle) * 3;
+      const be1y = hy - 5;
+      ctx.beginPath();
+      ctx.moveTo(be1x - earBase, be1y);
+      ctx.lineTo(be1x, be1y - earH);
+      ctx.lineTo(be1x + earBase, be1y);
+      ctx.closePath();
+      ctx.fillStyle = "#6a7278"; ctx.fill();
+      ctx.strokeStyle = outline; ctx.lineWidth = 1; ctx.stroke();
+      // Inner ear
+      ctx.beginPath();
+      ctx.moveTo(be1x - 2, be1y - 1);
+      ctx.lineTo(be1x, be1y - earH + 3);
+      ctx.lineTo(be1x + 2, be1y - 1);
+      ctx.closePath();
+      ctx.fillStyle = "#b8a0a0"; ctx.fill();
+
+      // Front ear
+      const fe1x = hx + Math.cos(headAngle) * 2;
+      const fe1y = hy - 5;
+      ctx.beginPath();
+      ctx.moveTo(fe1x - earBase, fe1y);
+      ctx.lineTo(fe1x, fe1y - earH);
+      ctx.lineTo(fe1x + earBase, fe1y);
+      ctx.closePath();
+      ctx.fillStyle = "#6a7278"; ctx.fill();
+      ctx.strokeStyle = outline; ctx.lineWidth = 1; ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(fe1x - 2, fe1y - 1);
+      ctx.lineTo(fe1x, fe1y - earH + 3);
+      ctx.lineTo(fe1x + 2, fe1y - 1);
+      ctx.closePath();
+      ctx.fillStyle = "#b8a0a0"; ctx.fill();
+
+      // Lighter muzzle area
+      ctx.beginPath();
+      ctx.ellipse(hx + Math.cos(headAngle) * 5, hy + 1, 5, 3.5, headAngle, 0, Math.PI * 2);
+      ctx.fillStyle = "#b8b8a8"; ctx.fill();
+
+      // Nose — wider and flatter than dog's
+      ctx.beginPath();
+      ctx.ellipse(hx + Math.cos(headAngle) * 9, hy + 1, 2.8, 2, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "#0f0f0f"; ctx.fill();
+
+      // Eye — smaller, amber, no shine (watchful not warm)
+      const ex = hx + Math.cos(headAngle) * 3;
+      const ey = hy - 2;
+      ctx.beginPath(); ctx.arc(ex, ey, 2.2, 0, Math.PI * 2);
+      ctx.fillStyle = "#b07820"; ctx.fill();
+      ctx.strokeStyle = outline; ctx.lineWidth = 0.5; ctx.stroke();
+      ctx.beginPath(); ctx.arc(ex, ey, 1.1, 0, Math.PI * 2);
+      ctx.fillStyle = "#0a0a0a"; ctx.fill();
     }
-    ctx.stroke();
-    // Head — placed on the side of the body in the direction of headAngle
-    const hx = x + Math.cos(headAngle) * 16;
-    const hy = y + Math.sin(headAngle) * 6 - 2;
-    ctx.beginPath();
-    ctx.ellipse(hx, hy, 7, 5.5, headAngle, 0, Math.PI * 2);
-    ctx.fillStyle = bodyCol; ctx.fill(); ctx.stroke();
-    // Ears
-    ctx.beginPath();
-    ctx.moveTo(hx - Math.cos(headAngle) * 2, hy - 5);
-    ctx.lineTo(hx - Math.cos(headAngle) * 4, hy - 10);
-    ctx.lineTo(hx + 2, hy - 5);
-    ctx.fillStyle = outline; ctx.fill();
-    // Eye
-    const exd = hx + Math.cos(headAngle) * 5;
-    const eyd = hy + Math.sin(headAngle) * 5;
-    ctx.beginPath(); ctx.arc(exd, eyd, 1.6, 0, Math.PI * 2);
-    ctx.fillStyle = "#0f1117"; ctx.fill();
   }
 
   function drawTarget(tx, ty) {
