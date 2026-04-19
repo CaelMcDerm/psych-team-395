@@ -2,9 +2,12 @@
  * Boot: build tabs (groups), sub-nav (topic pills + species toggle), wire switching.
  */
 (async function boot() {
+  // Wait for authentication before loading the app
+  await Auth.init();
+
   let groups;
   try {
-    const resp = await fetch("/api/groups");
+    const resp = await fetch("/api/groups", { credentials: "include" });
     groups = await resp.json();
   } catch {
     // Fallback when backend isn't running
@@ -137,7 +140,7 @@ function activateCurrent() {
   ControlPanel.render();
   document.getElementById("info-content").innerHTML = AppState.getInfoText(key);
   Simulation.start(key);
-  Chat.renderHistory();
+  Chat.loadHistory();
 }
 
 // === Sub-nav rendering ===

@@ -13,8 +13,33 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
+  <!-- Auth Modal Overlay -->
+  <div id="auth-overlay">
+    <div id="auth-modal">
+      <h1>Simulation Dashboard</h1>
+      <p>Sign in to save your chat history across sessions.</p>
+      <div id="auth-tabs">
+        <button class="auth-tab active" data-tab="login">Login</button>
+        <button class="auth-tab" data-tab="register">Register</button>
+      </div>
+      <form id="auth-form" autocomplete="on">
+        <input type="text" id="auth-username" placeholder="Username" autocomplete="username" />
+        <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password" />
+        <div id="auth-error"></div>
+        <button type="submit" id="auth-submit">Login</button>
+      </form>
+      <button type="button" id="auth-guest-btn">Continue as Guest</button>
+    </div>
+  </div>
+
   <!-- Top Tab Bar (species groups) -->
-  <nav id="tab-bar"></nav>
+  <nav id="tab-bar">
+    <div id="user-bar" class="hidden">
+      <span id="user-name"></span>
+      <button id="logout-btn">Logout</button>
+    </div>
+    <button id="login-btn" class="hidden">Login</button>
+  </nav>
 
   <!-- Sub-nav: topic pills + species toggle -->
   <div id="sub-nav">
@@ -70,6 +95,7 @@
   <script src="js/controlPanel.js"></script>
   <script src="js/simulation.js"></script>
   <script src="js/chat.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

@@ -1,11 +1,22 @@
 import json
+import uuid
 import requests
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, session
+from flask_login import current_user
 
 import chat_manager
 import config
 
 chat_bp = Blueprint("chat", __name__)
+
+
+def _get_ids():
+    """Return (user_id, guest_id) based on current auth state."""
+    if current_user.is_authenticated:
+        return current_user.id, None
+    if "guest_id" not in session:
+        session["guest_id"] = str(uuid.uuid4())
+    return None, session["guest_id"]
 
 
 def call_cloud_api(history: list[dict], system_prompt: str) -> str:
@@ -74,8 +85,9 @@ def chat():
     if not all([group_id, topic_id, message]):
         return jsonify({"error": "groupId, topicId, and message are required"}), 400
 
-    chat_manager.append(group_id, topic_id, "user", message)
-    history = chat_manager.get_history(group_id, topic_id)
+    user_id, guest_id = _get_ids()
+    chat_manager.append(user_id, group_id, topic_id, "user", message, guest_id)
+    history = chat_manager.get_history(user_id, group_id, topic_id, guest_id)
     system_prompt = chat_manager.get_system_prompt(group_id, topic_id)
 
     try:
@@ -86,7 +98,7 @@ def chat():
     except Exception as e:
         return jsonify({"error": str(e)}), 502
 
-    chat_manager.append(group_id, topic_id, "assistant", reply)
+    chat_manager.append(user_id, group_id, topic_id, "assistant", reply, guest_id)
     return jsonify({"reply": reply})
 
 
@@ -97,5 +109,17 @@ def chat_reset():
     topic_id = payload.get("topicId")
     if not all([group_id, topic_id]):
         return jsonify({"error": "groupId and topicId are required"}), 400
-    chat_manager.reset(group_id, topic_id)
+    user_id, guest_id = _get_ids()
+    chat_manager.reset(user_id, group_id, topic_id, guest_id)
     return jsonify({"ok": True})
+
+
+@chat_bp.route("/api/chat/history", methods=["GET"])
+def chat_history():
+    group_id = request.args.get("groupId")
+    topic_id = request.args.get("topicId")
+    if not all([group_id, topic_id]):
+        return jsonify({"error": "groupId and topicId are required"}), 400
+    user_id, guest_id = _get_ids()
+    history = chat_manager.get_history(user_id, group_id, topic_id, guest_id)
+    return jsonify({"history": history})

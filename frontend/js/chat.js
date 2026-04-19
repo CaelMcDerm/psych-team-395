@@ -4,6 +4,7 @@
 const Chat = (() => {
   let drawer, header, messagesEl, form, input, sendBtn, resetBtn;
   let sending = false;
+  const loadedFromServer = new Set();
 
   function init() {
     drawer     = document.getElementById("chat-drawer");
@@ -30,6 +31,29 @@ const Chat = (() => {
     messagesEl.innerHTML = "";
     history.forEach(msg => appendBubble(msg.role, msg.content));
     messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function loadHistory() {
+    const key = AppState.chatKey;
+    if (loadedFromServer.has(key)) {
+      renderHistory();
+      return;
+    }
+    fetch(`/api/chat/history?groupId=${AppState.activeGroup}&topicId=${AppState.activeTopic}`, {
+      credentials: "include",
+    })
+      .then(r => {
+        if (r.status === 401) { Auth.showModal(); return null; }
+        return r.json();
+      })
+      .then(data => {
+        if (!data) return;
+        loadedFromServer.add(key);
+        AppState.clearChat(key);
+        data.history.forEach(m => AppState.appendChat(key, m.role, m.content));
+        renderHistory();
+      })
+      .catch(() => renderHistory());
   }
 
   function appendBubble(role, content) {
@@ -72,12 +96,14 @@ const Chat = (() => {
       const resp = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           groupId: AppState.activeGroup,
           topicId: AppState.activeTopic,
           message,
         }),
       });
+
       const data = await resp.json();
       removeTyping();
 
@@ -101,12 +127,14 @@ const Chat = (() => {
     e.stopPropagation();
     const key = AppState.chatKey;
     AppState.clearChat(key);
+    loadedFromServer.add(key); // mark as loaded (now empty)
     messagesEl.innerHTML = "";
 
     try {
       await fetch("/api/chat/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           groupId: AppState.activeGroup,
           topicId: AppState.activeTopic,
@@ -115,5 +143,5 @@ const Chat = (() => {
     } catch { /* local history already cleared */ }
   }
 
-  return { init, toggle, renderHistory };
+  return { init, toggle, renderHistory, loadHistory };
 })();

@@ -533,6 +533,193 @@ body {
   }
 }
 
+/* === Auth Overlay === */
+#auth-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 17, 23, 0.97);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#auth-overlay.hidden {
+  display: none;
+}
+
+#auth-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 380px;
+}
+
+#auth-modal h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+#auth-modal > p {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+}
+
+#auth-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.auth-tab {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.4rem 1rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.auth-tab:hover {
+  color: var(--text);
+}
+
+.auth-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+#auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+#auth-username,
+#auth-password {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+#auth-username:focus,
+#auth-password:focus {
+  border-color: var(--accent);
+}
+
+#auth-error {
+  color: var(--danger);
+  font-size: 0.8125rem;
+  min-height: 1.2em;
+}
+
+#auth-submit {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#auth-submit:hover {
+  background: var(--accent-hover);
+}
+
+#auth-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#auth-guest-btn {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  padding: 0.5rem 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: center;
+  width: 100%;
+  margin-top: 0.25rem;
+  transition: color 0.2s;
+}
+
+#auth-guest-btn:hover {
+  color: var(--text);
+}
+
+/* === User Bar & Login Button === */
+#user-bar {
+  margin-left: auto;
+  order: 999;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+#login-btn {
+  margin-left: auto;
+  order: 999;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.3rem 1rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+#login-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+#user-name {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+#logout-btn {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+#logout-btn:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
 /* === Scrollbar === */
 ::-webkit-scrollbar {
   width: 6px;
