@@ -81,6 +81,9 @@ def chat():
     group_id = payload.get("groupId")
     topic_id = payload.get("topicId")
     message = payload.get("message", "").strip()
+    response_mode = payload.get("responseMode", "detailed")
+    if response_mode not in ("concise", "detailed"):
+        response_mode = "detailed"
 
     if not all([group_id, topic_id, message]):
         return jsonify({"error": "groupId, topicId, and message are required"}), 400
@@ -88,7 +91,7 @@ def chat():
     user_id, guest_id = _get_ids()
     chat_manager.append(user_id, group_id, topic_id, "user", message, guest_id)
     history = chat_manager.get_history(user_id, group_id, topic_id, guest_id)
-    system_prompt = chat_manager.get_system_prompt(group_id, topic_id)
+    system_prompt = config.get_system_prompt(group_id, topic_id, response_mode)
 
     try:
         if config.MODEL_PROVIDER == "cloud":

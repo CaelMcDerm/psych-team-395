@@ -75,7 +75,12 @@
     <div id="chat-header">
       <span id="chat-toggle-label">Chat</span>
       <span id="chat-chevron">&#9650;</span>
-      <button id="chat-reset-btn" title="Reset chat">Reset</button>
+      <span id="response-mode-label">Response style:</span>
+      <div id="response-mode-toggle" role="group" aria-label="Response style">
+        <button class="mode-btn active" data-mode="concise" title="Short, focused answers — best for quick exploration">Concise</button>
+        <button class="mode-btn" data-mode="detailed" title="Longer, in-depth explanations — best for deeper understanding">Detailed</button>
+      </div>
+      <button id="chat-reset-btn" title="Reset chat">Reset Chat</button>
     </div>
     <div id="chat-body">
       <div id="chat-messages"></div>

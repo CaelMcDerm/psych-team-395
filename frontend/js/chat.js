@@ -4,6 +4,7 @@
 const Chat = (() => {
   let drawer, header, messagesEl, form, input, sendBtn, resetBtn;
   let sending = false;
+  let responseMode = "concise";
   const loadedFromServer = new Set();
 
   function init() {
@@ -18,10 +19,18 @@ const Chat = (() => {
     header.addEventListener("click", toggle);
     form.addEventListener("submit", onSubmit);
     resetBtn.addEventListener("click", onReset);
+
+    document.querySelectorAll(".mode-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        responseMode = btn.dataset.mode;
+        document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+      });
+    });
   }
 
   function toggle(e) {
-    if (e && e.target.id === "chat-reset-btn") return;
+    if (e && (e.target.id === "chat-reset-btn" || e.target.classList.contains("mode-btn"))) return;
     drawer.classList.toggle("open");
   }
 
@@ -29,6 +38,8 @@ const Chat = (() => {
     const key = AppState.chatKey;
     const history = AppState.getChatHistory(key);
     messagesEl.innerHTML = "";
+    const greeting = AppState.getGreeting(key);
+    if (greeting) appendBubble("assistant", greeting);
     history.forEach(msg => appendBubble(msg.role, msg.content));
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
@@ -101,6 +112,7 @@ const Chat = (() => {
           groupId: AppState.activeGroup,
           topicId: AppState.activeTopic,
           message,
+          responseMode,
         }),
       });
 
@@ -129,6 +141,8 @@ const Chat = (() => {
     AppState.clearChat(key);
     loadedFromServer.add(key); // mark as loaded (now empty)
     messagesEl.innerHTML = "";
+    const greeting = AppState.getGreeting(key);
+    if (greeting) appendBubble("assistant", greeting);
 
     try {
       await fetch("/api/chat/reset", {

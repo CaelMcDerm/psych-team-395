@@ -163,6 +163,26 @@ const AppState = (() => {
   <div class="legend-row"><span class="dot" style="background:#e24b4a"></span> Incorrect / no response</div>
 </div>`;
 
+  // Predefined greeting messages keyed by "group:topic".
+  // Shown instantly as a display-only bubble when a chat session is empty.
+  // These are never stored in chat history and are never sent to the model.
+  const greetingMessages = {
+    "chimps_bonobos:aggression":
+      "Welcome! In this simulation you'll explore how aggression evolves differently in chimpanzees and bonobos depending on who controls mate selection. Once you've had a chance to explore both species, I'll ask you to apply what you've learned to predict the social behavior of a different animal. Feel free to ask me anything about what you're seeing.",
+
+    "chimps_bonobos:culture":
+      "Welcome! This simulation lets you compare two types of cultural transmission in vervet monkeys — one that mirrors what real primates do, and one that they don't. Once you understand the difference, I'll ask you to think about how this applies to a different species. Ask me anything as you explore.",
+
+    "dogs_wolves:gaze_following":
+      "Welcome! Here you'll investigate how domestication shaped the way dogs and wolves attend to human social cues — a difference that turns out to be genetic, not learned. After you've explored both species, I'll pose a question asking you to apply these ideas to a different animal. Ask away whenever you're curious.",
+
+    "humans:self_domestication":
+      "Welcome! This simulation models the self-domestication hypothesis — how selection for prosociality could have driven domestication-like changes in humans without any intentional breeding. Once you've explored the dynamics at play, I'll ask you to connect what you've learned to another species' origins. Ask me anything as you go.",
+
+    "elephants:theory_of_mind":
+      "Welcome! You'll be exploring two simulations that test different aspects of elephant social cognition — cooperative problem-solving and sensitivity to human communicative intent. After you've worked through both, I'll ask you to predict something about the social minds of a different species. Jump in and ask me anything you're wondering about.",
+  };
+
   function initState(key) {
     if (store[key]) return;
     const cfg = controlConfigs[key] || [];
@@ -189,6 +209,7 @@ const AppState = (() => {
 
     getControlConfigs(key) { return controlConfigs[key || stateKey()] || []; },
     getInfoText(key) { return infoTexts[key || stateKey()] || "<p>No information available.</p>"; },
+    getGreeting(key) { return greetingMessages[key] || null; },
 
     getState(key) {
       const k = key || stateKey();
