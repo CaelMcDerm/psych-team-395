@@ -19,8 +19,6 @@
  * card after the drawer's slide animation finishes when the user opens or closes it.
  */
 const Tutorial = (() => {
-  const STORAGE_KEY = 'psych_tutorial_seen';
-
   const STEPS = [
     {
       title: "Welcome to the Simulation Dashboard",
@@ -88,9 +86,9 @@ const Tutorial = (() => {
     document.getElementById('tutorial-skip-btn').addEventListener('click', finish);
     document.getElementById('tutorial-btn').addEventListener('click', start);
 
-    const shouldShow = isAuthenticated
-      ? tutorialSeen === false
-      : !localStorage.getItem(STORAGE_KEY);
+    // Authenticated users: show once (tutorial_seen persisted server-side).
+    // Guests: always show — their session has no persistent state.
+    const shouldShow = isAuthenticated ? tutorialSeen === false : true;
 
     if (shouldShow) start();
   }
@@ -126,8 +124,6 @@ const Tutorial = (() => {
 
     if (isAuthenticated) {
       fetch('/api/tutorial/complete', { method: 'POST', credentials: 'include' }).catch(() => {});
-    } else {
-      localStorage.setItem(STORAGE_KEY, '1');
     }
   }
 
