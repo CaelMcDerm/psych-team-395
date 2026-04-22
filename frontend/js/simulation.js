@@ -7,6 +7,7 @@ const Simulation = (() => {
   let animId = null;
   let currentKey = null;
   let lastTime = 0;
+  let audioCtx = null;
 
   const happyImg = new Image();
   happyImg.src = "/images/joyfulsoul.png";
@@ -195,7 +196,7 @@ const Simulation = (() => {
         elephantX: 0, elephantY: 0,
         elephantTargetX: 0,
         chosenSide: null,
-        lastResult: null, resultTmr: 0,
+        lastResult: null, resultTmr: 0, footstepT: 0,
       };
       return;
     }
@@ -892,10 +893,11 @@ const Simulation = (() => {
       case "setup":
         pop.humanTargetAngle = 0;        // human looks forward
         pop.animalTargetAngle = angAnimalToHuman; // animal faces human
-        if (pop.phaseT > 0.5) { pop.phase = "cue"; pop.phaseT = 0; }
+        if (pop.phaseT > 0.5) { pop.phase = "cue"; pop.phaseT = 0; pop.cueSoundFired = false; }
         break;
       case "cue":
         pop.humanTargetAngle = angHumanToTarget; // human turns to look at target
+        if (!pop.cueSoundFired) { playTargetClick(); pop.cueSoundFired = true; }
         if (pop.phaseT > 1.5) { pop.phase = "response"; pop.phaseT = 0; }
         break;
       case "response":
@@ -916,9 +918,11 @@ const Simulation = (() => {
           if (pop.species === "dogs") {
             pop.faceCount++;
             pop.lastResult = "Dog looked at human face";
+            playFailThud();
           } else {
             pop.gazeCount++;
             pop.lastResult = "Wolf followed gaze to target";
+            playRewardDing();
           }
           pop.resultTmr = 60;
         }
@@ -969,6 +973,175 @@ const Simulation = (() => {
   }
 
   // === Culture simulation (vervet monkeys — normative vs cumulative) ===
+
+  function playCrackSound() {
+    const ac = getAC(); if (!ac) return;
+    const now = ac.currentTime;
+
+    // Layer 1: impact thud — pitched thwack with fast pitch drop (rock mass)
+    const osc = ac.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(260, now);
+    osc.frequency.exponentialRampToValueAtTime(60, now + 0.12);
+
+    const oscGain = ac.createGain();
+    oscGain.gain.setValueAtTime(0.5, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+    osc.connect(oscGain);
+    oscGain.connect(ac.destination);
+    osc.start(now);
+    osc.stop(now + 0.15);
+
+    // Layer 2: mid-frequency noise — the hard clack of stone on shell
+    const bufLen = Math.floor(ac.sampleRate * 0.18);
+    const buf = ac.createBuffer(1, bufLen, ac.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
+
+    const noiseSrc = ac.createBufferSource();
+    noiseSrc.buffer = buf;
+
+    const bp = ac.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 1100;
+    bp.Q.value = 1.2;
+
+    const noiseGain = ac.createGain();
+    noiseGain.gain.setValueAtTime(0.45, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+    noiseSrc.connect(bp);
+    bp.connect(noiseGain);
+    noiseGain.connect(ac.destination);
+    noiseSrc.start(now);
+    noiseSrc.stop(now + 0.18);
+  }
+
+  function getAC() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    if (!audioCtx) audioCtx = new AC();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+
+  function playChitterSound() {
+    const ac = getAC(); if (!ac) return;
+    const now = ac.currentTime;
+    // Short rising chirp — filtered noise with slight pitch wobble
+    const bufLen = Math.floor(ac.sampleRate * 0.08);
+    const buf = ac.createBuffer(1, bufLen, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) d[i] = Math.random() * 2 - 1;
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const bp = ac.createBiquadFilter(); bp.type = "bandpass";
+    bp.frequency.setValueAtTime(1800, now);
+    bp.frequency.exponentialRampToValueAtTime(3200, now + 0.07);
+    bp.Q.value = 4;
+    const gain = ac.createGain();
+    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    src.connect(bp); bp.connect(gain); gain.connect(ac.destination);
+    src.start(now); src.stop(now + 0.09);
+  }
+
+  function playGenChime() {
+    const ac = getAC(); if (!ac) return;
+    const now = ac.currentTime;
+    // Soft bell tone — sine + quick decay
+    [523.25, 659.25].forEach((freq, i) => {
+      const osc = ac.createOscillator(); osc.type = "sine";
+      osc.frequency.value = freq;
+      const gain = ac.createGain();
+      gain.gain.setValueAtTime(0, now + i * 0.1);
+      gain.gain.linearRampToValueAtTime(0.15, now + i * 0.1 + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.6);
+      osc.connect(gain); gain.connect(ac.destination);
+      osc.start(now + i * 0.1); osc.stop(now + i * 0.1 + 0.65);
+    });
+  }
+
+  function playTargetClick() {
+    const ac = getAC(); if (!ac) return;
+    const now = ac.currentTime;
+    const bufLen = Math.floor(ac.sampleRate * 0.02);
+    const buf = ac.createBuffer(1, bufLen, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) d[i] = Math.random() * 2 - 1;
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const hp = ac.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 3000;
+    const gain = ac.createGain();
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+    src.connect(hp); hp.connect(gain); gain.connect(ac.destination);
+    src.start(now); src.stop(now + 0.022);
+  }
+
+  function playRewardDing() {
+    const ac = getAC(); if (!ac) return;
+    const now = ac.currentTime;
+    [880, 1108.73, 1318.51].forEach((freq, i) => {
+      const osc = ac.createOscillator(); osc.type = "sine";
+      osc.frequency.value = freq;
+      const gain = ac.createGain();
+      gain.gain.setValueAtTime(0, now + i * 0.07);
+      gain.gain.linearRampToValueAtTime(0.18, now + i * 0.07 + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.8);
+      osc.connect(gain); gain.connect(ac.destination);
+      osc.start(now + i * 0.07); osc.stop(now + i * 0.07 + 0.85);
+    });
+  }
+
+  function playFailThud() {
+    const ac = getAC(); if (!ac) return;
+    const now = ac.currentTime;
+    // Low buzz tone — descending
+    const osc = ac.createOscillator(); osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.exponentialRampToValueAtTime(60, now + 0.3);
+    const gain = ac.createGain();
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+    osc.connect(gain); gain.connect(ac.destination);
+    osc.start(now); osc.stop(now + 0.35);
+  }
+
+  function playRopeCreak() {
+    const ac = getAC(); if (!ac) return;
+    const now = ac.currentTime;
+    const bufLen = Math.floor(ac.sampleRate * 0.25);
+    const buf = ac.createBuffer(1, bufLen, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) d[i] = Math.random() * 2 - 1;
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const bp = ac.createBiquadFilter(); bp.type = "bandpass";
+    bp.frequency.setValueAtTime(400, now);
+    bp.frequency.exponentialRampToValueAtTime(200, now + 0.25);
+    bp.Q.value = 3;
+    const gain = ac.createGain();
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    src.connect(bp); bp.connect(gain); gain.connect(ac.destination);
+    src.start(now); src.stop(now + 0.26);
+  }
+
+  function playFootstep() {
+    const ac = getAC(); if (!ac) return;
+    const now = ac.currentTime;
+    // Heavy dull thud — low bandpass noise
+    const bufLen = Math.floor(ac.sampleRate * 0.1);
+    const buf = ac.createBuffer(1, bufLen, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) d[i] = Math.random() * 2 - 1;
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const bp = ac.createBiquadFilter(); bp.type = "lowpass"; bp.frequency.value = 180;
+    const gain = ac.createGain();
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    src.connect(bp); bp.connect(gain); gain.connect(ac.destination);
+    src.start(now); src.stop(now + 0.11);
+  }
 
   function drawMonkey(x, y, cracking) {
     // Tail (drawn first so it sits behind the body)
@@ -1207,11 +1380,29 @@ const Simulation = (() => {
       if (m.cracking > 0) m.cracking -= dt * speed;
     });
 
+    // Separation — push apart any pair closer than minDist
+    const minDist = 44;
+    for (let i = 0; i < pop.monkeys.length; i++) {
+      for (let j = i + 1; j < pop.monkeys.length; j++) {
+        const a = pop.monkeys[i], b = pop.monkeys[j];
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < minDist && d > 0) {
+          const push = (minDist - d) * 0.5;
+          const nx = dx / d, ny = dy / d;
+          a.x -= nx * push; a.y -= ny * push;
+          b.x += nx * push; b.y += ny * push;
+        }
+      }
+    }
+
     // Randomly trigger cracking animations
     if (Math.random() < 0.03 * speed) {
       const m = pop.monkeys[Math.floor(Math.random() * pop.monkeys.length)];
       if (m.cracking <= 0) {
         m.cracking = 1.5;
+        playChitterSound();
+        playCrackSound();
         // Add a crack event at the walnut position on the ground (foot level)
         pop.crackEvents.push({
           x: m.x - 12, y: m.y + 17,
@@ -1263,6 +1454,7 @@ const Simulation = (() => {
       pop.history.push({ gen: pop.gen, walnuts, skill: pop.skill });
       if (pop.history.length > 40) pop.history.shift();
 
+      playGenChime();
       pop.flashMsg = `Generation ${pop.gen}`;
       pop.flashTmr = 55;
 
@@ -1989,12 +2181,13 @@ const Simulation = (() => {
         }
         // Both arrived
         if (pop.aArrived && pop.bArrived) {
-          pop.phase = "pull_together"; pop.phaseT = 0;
+          pop.phase = "pull_together"; pop.phaseT = 0; pop.creakFired = false;
         }
         break;
       }
       case "pull_together": {
         pop.aPulling = true; pop.bPulling = true;
+        if (!pop.creakFired) { playRopeCreak(); pop.creakFired = true; }
         pop.ropeOffset += 35 * speed * dt;
         if (pop.ropeOffset >= 45) {
           pop.phase = "result"; pop.phaseT = 0;
@@ -2002,6 +2195,7 @@ const Simulation = (() => {
           pop.successes++;
           pop.lastResult = "✓ Cooperation successful!";
           pop.resultTmr = 80;
+          playRewardDing();
           const total = Math.max(pop.trial, 1);
           pop.history.push({ trial: pop.trial, success: true, rate: pop.successes / total });
           if (pop.history.length > 30) pop.history.shift();
@@ -2018,6 +2212,7 @@ const Simulation = (() => {
           pop.failures++;
           pop.lastResult = "✕ Rope slipped — partner needed!";
           pop.resultTmr = 80;
+          playFailThud();
           const total = Math.max(pop.trial, 1);
           pop.history.push({ trial: pop.trial, success: false, rate: pop.successes / total });
           if (pop.history.length > 30) pop.history.shift();
@@ -2301,6 +2496,8 @@ const Simulation = (() => {
         if (dist > 5) {
           pop.elephantX += (dx / dist) * 80 * speed * dt;
           pop.elephantY += (dy / dist) * 80 * speed * dt;
+          pop.footstepT -= dt;
+          if (pop.footstepT <= 0) { playFootstep(); pop.footstepT = 0.38 / speed; }
         } else {
           pop.phase = "result"; pop.phaseT = 0;
           pop.trial++;
@@ -2314,6 +2511,7 @@ const Simulation = (() => {
           }
           pop.lastResult = correct ? "✓ Correct container!" : "✕ Wrong container";
           pop.resultTmr = 70;
+          if (correct) playRewardDing(); else playFailThud();
         }
         break;
       }
