@@ -38,7 +38,7 @@ def login():
         return jsonify({"error": "Invalid username or password"}), 401
 
     login_user(user)
-    return jsonify({"ok": True, "username": user.username})
+    return jsonify({"ok": True, "username": user.username, "tutorial_seen": user.tutorial_seen})
 
 
 @auth_bp.route("/api/auth/logout", methods=["POST"])
@@ -51,5 +51,17 @@ def logout():
 @auth_bp.route("/api/auth/me", methods=["GET"])
 def me():
     if current_user.is_authenticated:
-        return jsonify({"authenticated": True, "username": current_user.username})
+        return jsonify({
+            "authenticated": True,
+            "username": current_user.username,
+            "tutorial_seen": current_user.tutorial_seen,
+        })
     return jsonify({"authenticated": False})
+
+
+@auth_bp.route("/api/tutorial/complete", methods=["POST"])
+@login_required
+def tutorial_complete():
+    current_user.tutorial_seen = True
+    db.session.commit()
+    return jsonify({"ok": True})

@@ -63,6 +63,8 @@ const Progress = (() => {
       registerBtn.textContent = "Register";
       registerBtn.addEventListener("click", () => { hide(); Auth.showModal(); });
       list.appendChild(registerBtn);
+
+      _appendReplayLink(list);
       return;
     }
 
@@ -89,6 +91,16 @@ const Progress = (() => {
       row.appendChild(status);
       list.appendChild(row);
     });
+
+    _appendReplayLink(list);
+  }
+
+  function _appendReplayLink(container) {
+    const link = document.createElement("button");
+    link.className = "progress-replay-btn";
+    link.textContent = "Replay tutorial";
+    link.addEventListener("click", () => { hide(); Tutorial.start(); });
+    container.appendChild(link);
   }
 
   function _updateBadge() {

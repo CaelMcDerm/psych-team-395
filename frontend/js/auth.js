@@ -14,7 +14,7 @@ const Auth = (() => {
       const data = await resp.json();
       if (data.authenticated) {
         _onAuth(data.username);
-        return data.username;
+        return { username: data.username, tutorialSeen: data.tutorial_seen };
       }
     } catch { /* backend unreachable — fall through to show modal */ }
 
@@ -86,7 +86,9 @@ const Auth = (() => {
         const data = await resp.json();
         if (resp.ok) {
           _onAuth(data.username);
-          if (resolveReady) resolveReady(data.username);
+          // Register always means a new user; login returns tutorial_seen from DB.
+          const tutorialSeen = mode === 'register' ? false : (data.tutorial_seen || false);
+          if (resolveReady) resolveReady({ username: data.username, tutorialSeen });
         } else {
           errorEl.textContent = data.error || 'An error occurred';
         }
@@ -100,7 +102,7 @@ const Auth = (() => {
     // Continue as Guest
     document.getElementById('auth-guest-btn').addEventListener('click', () => {
       _onGuest();
-      if (resolveReady) resolveReady(null);
+      if (resolveReady) resolveReady({ username: null, tutorialSeen: null });
     });
 
     // Login button (shown in tab bar for guests)
