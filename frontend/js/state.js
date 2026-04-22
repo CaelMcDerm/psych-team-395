@@ -183,6 +183,19 @@ const AppState = (() => {
       "Welcome! You'll be exploring two simulations that test different aspects of elephant social cognition — cooperative problem-solving and sensitivity to human communicative intent. After you've worked through both, I'll ask you to predict something about the social minds of a different species. Jump in and ask me anything you're wondering about.",
   };
 
+  // Animal photos shown in info panel, keyed by "group:topic:species"
+  const animalImages = {
+    "chimps_bonobos:aggression:chimpanzees":           "images/animals/chimpanzee.jpg",
+    "chimps_bonobos:aggression:bonobos":               "images/animals/bonobo.jpg",
+    "dogs_wolves:gaze_following:dogs":                 "images/animals/dog.jpg",
+    "dogs_wolves:gaze_following:wolves":               "images/animals/wolf.jpg",
+    "chimps_bonobos:culture:normative_conformity":     "images/animals/vervet.jpg",
+    "chimps_bonobos:culture:cumulative_culture":       "images/animals/vervet.jpg",
+    "humans:self_domestication:humans":                "images/animals/human.jpg",
+    "elephants:theory_of_mind:cooperative_pulling":    "images/animals/elephant.jpg",
+    "elephants:theory_of_mind:human_pointing":         "images/animals/elephant.jpg",
+  };
+
   function initState(key) {
     if (store[key]) return;
     const cfg = controlConfigs[key] || [];
@@ -209,6 +222,7 @@ const AppState = (() => {
 
     getControlConfigs(key) { return controlConfigs[key || stateKey()] || []; },
     getInfoText(key) { return infoTexts[key || stateKey()] || "<p>No information available.</p>"; },
+    getAnimalImage(key) { return animalImages[key || stateKey()] || null; },
     getGreeting(key) { return greetingMessages[key] || null; },
 
     getState(key) {

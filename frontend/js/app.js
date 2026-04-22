@@ -141,7 +141,28 @@ function switchSpecies(speciesId) {
 function activateCurrent() {
   const key = AppState.activeKey;
   ControlPanel.render();
-  document.getElementById("info-content").innerHTML = AppState.getInfoText(key);
+
+  const infoContent = document.getElementById("info-content");
+  infoContent.innerHTML = AppState.getInfoText(key);
+
+  const imgPath = AppState.getAnimalImage(key);
+  if (imgPath) {
+    const wrap = document.createElement("div");
+    wrap.className = "species-photo-wrap";
+    const img = document.createElement("img");
+    img.className = "species-photo";
+    img.src = imgPath;
+    img.alt = "";
+    img.onerror = () => wrap.remove();
+    wrap.appendChild(img);
+    const legend = infoContent.querySelector(".legend-block");
+    if (legend) {
+      infoContent.insertBefore(wrap, legend);
+    } else {
+      infoContent.appendChild(wrap);
+    }
+  }
+
   Simulation.start(key);
   Chat.loadHistory();
 }
