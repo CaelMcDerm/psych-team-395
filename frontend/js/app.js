@@ -1,3 +1,16 @@
+/** Maps composite key → local image path + alt text for the animal photo. */
+const animalPhotoMap = {
+  "chimps_bonobos:aggression:chimpanzees":        { src: "images/animals/chimpanzee.jpg",   alt: "Chimpanzee"   },
+  "chimps_bonobos:aggression:bonobos":            { src: "images/animals/bonobo.jpg",        alt: "Bonobo"       },
+  "chimps_bonobos:culture:normative_conformity":  { src: "images/animals/vervet_monkey.jpg", alt: "Vervet Monkey" },
+  "chimps_bonobos:culture:cumulative_culture":    { src: "images/animals/vervet_monkey.jpg", alt: "Vervet Monkey" },
+  "dogs_wolves:gaze_following:dogs":              { src: "images/animals/dog.jpg",           alt: "Dog"          },
+  "dogs_wolves:gaze_following:wolves":            { src: "images/animals/wolf.jpg",          alt: "Wolf"         },
+  "humans:self_domestication:humans":             { src: "images/animals/human.jpg",         alt: "Human"        },
+  "elephants:theory_of_mind:cooperative_pulling": { src: "images/animals/elephant.jpg",      alt: "Elephant"     },
+  "elephants:theory_of_mind:human_pointing":      { src: "images/animals/elephant.jpg",      alt: "Elephant"     },
+};
+
 /**
  * Boot: build tabs (groups), sub-nav (topic pills + species toggle), wire switching.
  */
@@ -139,7 +152,27 @@ function switchSpecies(speciesId) {
 function activateCurrent() {
   const key = AppState.activeKey;
   ControlPanel.render();
-  document.getElementById("info-content").innerHTML = AppState.getInfoText(key);
+
+  const infoEl = document.getElementById("info-content");
+  infoEl.innerHTML = AppState.getInfoText(key);
+
+  const photo = animalPhotoMap[key];
+  if (photo) {
+    const wrap = document.createElement("div");
+    wrap.className = "animal-photo-wrap";
+    const img = document.createElement("img");
+    img.src = photo.src;
+    img.alt = photo.alt;
+    img.className = "animal-photo";
+    wrap.appendChild(img);
+    const legend = infoEl.querySelector(".legend-block");
+    if (legend) {
+      infoEl.insertBefore(wrap, legend);
+    } else {
+      infoEl.appendChild(wrap);
+    }
+  }
+
   Simulation.start(key);
   Chat.loadHistory();
 }
