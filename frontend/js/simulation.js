@@ -508,13 +508,14 @@ const Simulation = (() => {
       });
     }
 
+    ctx.fillStyle = "rgba(15,17,23,0.75)"; ctx.fillRect(0, 0, w, 32);
     ctx.font = "12px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
     const cm = hist.length ? hist[hist.length - 1].mean : 0;
-    ctx.fillText(`Gen ${pop.gen}   mean aggression: ${cm.toFixed(3)}`, 14, h - 20);
+    ctx.fillText(`Gen ${pop.gen}   mean aggression: ${cm.toFixed(3)}`, 14, 18);
 
     const pct = (pop.frame % 300) / 300;
-    ctx.fillStyle = "#2a2d3a"; ctx.fillRect(14, h - 10, w - 28, 3);
-    ctx.fillStyle = "#378add"; ctx.fillRect(14, h - 10, (w - 28) * pct, 3);
+    ctx.fillStyle = "#2a2d3a"; ctx.fillRect(14, 24, w - 28, 3);
+    ctx.fillStyle = "#378add"; ctx.fillRect(14, 24, (w - 28) * pct, 3);
 
     if (pop.flashTmr > 0) {
       const al = Math.min(pop.flashTmr / 20, 1);
@@ -850,9 +851,10 @@ const Simulation = (() => {
     ctx.fillText(`Trials: ${pop.trial}`, cxp, cyp + 56);
     ctx.fillText(`Phase: ${pop.phase}`, cxp + 90, cyp + 56);
 
-    // Footer status line
+    // Header status line
+    ctx.fillStyle = "rgba(15,17,23,0.75)"; ctx.fillRect(0, 0, w, 28);
     ctx.font = "12px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
-    ctx.fillText(`${pop.species === "dogs" ? "Dog" : "Wolf"} • Hand-reared, identical conditions`, 14, h - 20);
+    ctx.fillText(`${pop.species === "dogs" ? "Dog" : "Wolf"} • Hand-reared, identical conditions`, 14, 18);
 
     if (pop.resultTmr > 0) {
       const al = Math.min(pop.resultTmr / 30, 1);
@@ -1474,15 +1476,16 @@ const Simulation = (() => {
     // Draw graph
     drawCultureGraph(pop);
 
-    // Generation progress bar
-    const pct = pop.frame / genLength;
-    ctx.fillStyle = "#2a2d3a"; ctx.fillRect(14, h - 50, w - 28, 3);
-    ctx.fillStyle = "#9FE1CB"; ctx.fillRect(14, h - 50, (w - 28) * pct, 3);
-
-    // Footer
+    // Header
+    ctx.fillStyle = "rgba(15,17,23,0.75)"; ctx.fillRect(0, 0, w, 32);
     ctx.font = "12px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
     const modeLabel = isCumulative ? "Cumulative Culture (hypothetical)" : "Normative Conformity";
-    ctx.fillText(`Vervet Monkeys • ${modeLabel} • Gen ${pop.gen}`, 14, h - 60);
+    ctx.fillText(`Vervet Monkeys • ${modeLabel} • Gen ${pop.gen}`, 14, 18);
+
+    // Generation progress bar
+    const pct = pop.frame / genLength;
+    ctx.fillStyle = "#2a2d3a"; ctx.fillRect(14, 24, w - 28, 3);
+    ctx.fillStyle = "#9FE1CB"; ctx.fillRect(14, 24, (w - 28) * pct, 3);
 
     // Flash message
     if (pop.flashTmr > 0) {
@@ -1501,7 +1504,7 @@ const Simulation = (() => {
   function selfdomPhysics(pop, dt) {
     const ag = pop.agents.filter(a => a.alive);
     const w = cw(), h = ch();
-    const simH = h - 70; // keep above footer area
+    const simH = h - 12;
 
     // Prosocial humans attract each other
     const prosocials = ag.filter(a => isProsocial(a));
@@ -1946,16 +1949,17 @@ const Simulation = (() => {
       selfdomNextGen(key, pop);
     }
 
-    // Progress bar
-    const pct = (pop.frame % 400) / 400;
-    ctx.fillStyle = "#2a2d3a"; ctx.fillRect(14, h - 50, w - 28, 3);
-    ctx.fillStyle = "#4ade80"; ctx.fillRect(14, h - 50, (w - 28) * pct, 3);
-
-    // Footer
+    // Header
+    ctx.fillStyle = "rgba(15,17,23,0.75)"; ctx.fillRect(0, 0, w, 32);
     const aliveCount = pop.agents.filter(a => a.alive).length;
     const prosCount = pop.agents.filter(a => a.alive && isProsocial(a)).length;
     ctx.font = "12px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
-    ctx.fillText(`Gen ${pop.gen}  •  alive: ${aliveCount}  •  prosocial: ${prosCount}  •  aggressive: ${aliveCount - prosCount}`, 14, h - 60);
+    ctx.fillText(`Gen ${pop.gen}  •  alive: ${aliveCount}  •  prosocial: ${prosCount}  •  aggressive: ${aliveCount - prosCount}`, 14, 18);
+
+    // Progress bar
+    const pct = (pop.frame % 400) / 400;
+    ctx.fillStyle = "#2a2d3a"; ctx.fillRect(14, 24, w - 28, 3);
+    ctx.fillStyle = "#4ade80"; ctx.fillRect(14, 24, (w - 28) * pct, 3);
 
     // Flash
     if (pop.flashTmr > 0) {
@@ -2283,13 +2287,14 @@ const Simulation = (() => {
       pop.resultTmr--;
     }
 
-    // Footer
+    // Header
+    ctx.fillStyle = "rgba(15,17,23,0.75)"; ctx.fillRect(0, 0, w, 32);
     ctx.font = "12px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
-    ctx.fillText(`Cooperative Rope Pulling • Trial ${pop.trial} • Success: ${pop.successes}/${pop.trial}`, 14, h - 60);
+    ctx.fillText(`Cooperative Rope Pulling • Trial ${pop.trial} • Success: ${pop.successes}/${pop.trial}`, 14, 18);
     // Progress bar
     const phasePct = Math.min(pop.phaseT / 4, 1);
-    ctx.fillStyle = "#2a2d3a"; ctx.fillRect(14, h - 50, w - 28, 3);
-    ctx.fillStyle = "#ef9f27"; ctx.fillRect(14, h - 50, (w - 28) * phasePct, 3);
+    ctx.fillStyle = "#2a2d3a"; ctx.fillRect(14, 24, w - 28, 3);
+    ctx.fillStyle = "#ef9f27"; ctx.fillRect(14, 24, (w - 28) * phasePct, 3);
   }
 
   // === Human Pointing Simulation ===
@@ -2572,12 +2577,13 @@ const Simulation = (() => {
       pop.resultTmr--;
     }
 
-    // Footer
+    // Header
+    ctx.fillStyle = "rgba(15,17,23,0.75)"; ctx.fillRect(0, 0, w, 32);
     ctx.font = "12px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
-    ctx.fillText(`Human Pointing • Trial ${pop.trial} • Facing: ${pop.facingCorrect}/${pop.facingTotal} • Turned: ${pop.turnedCorrect}/${pop.turnedTotal}`, 14, h - 60);
+    ctx.fillText(`Human Pointing • Trial ${pop.trial} • Facing: ${pop.facingCorrect}/${pop.facingTotal} • Turned: ${pop.turnedCorrect}/${pop.turnedTotal}`, 14, 18);
     const phasePct = Math.min(pop.phaseT / 3, 1);
-    ctx.fillStyle = "#2a2d3a"; ctx.fillRect(14, h - 50, w - 28, 3);
-    ctx.fillStyle = "#9FE1CB"; ctx.fillRect(14, h - 50, (w - 28) * phasePct, 3);
+    ctx.fillStyle = "#2a2d3a"; ctx.fillRect(14, 24, w - 28, 3);
+    ctx.fillStyle = "#9FE1CB"; ctx.fillRect(14, 24, (w - 28) * phasePct, 3);
   }
 
   // Renderer registry — maps key patterns to render functions.
