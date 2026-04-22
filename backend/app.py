@@ -40,6 +40,18 @@ app.register_blueprint(progress_bp)
 
 with app.app_context():
     db.create_all()
+    # Additive migrations for columns added after initial deployment.
+    # ALTER TABLE is a no-op if the column already exists (caught and ignored).
+    _migrations = [
+        "ALTER TABLE user ADD COLUMN tutorial_seen BOOLEAN NOT NULL DEFAULT 0",
+    ]
+    with db.engine.connect() as _conn:
+        for _sql in _migrations:
+            try:
+                _conn.execute(db.text(_sql))
+                _conn.commit()
+            except Exception:
+                pass
 
 
 @app.route("/")
