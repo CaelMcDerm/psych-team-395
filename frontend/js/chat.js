@@ -122,6 +122,7 @@ const Chat = (() => {
       if (resp.ok) {
         AppState.appendChat(key, "assistant", data.reply);
         appendBubble("assistant", data.reply);
+        if (data.transfer_passed) Progress.refresh();
       } else {
         appendBubble("error", data.error || "Failed to get response");
       }

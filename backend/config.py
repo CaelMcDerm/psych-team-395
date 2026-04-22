@@ -212,6 +212,13 @@ TRANSFER QUESTIONS
   aggressive species, ask "What happened in the simulation when aggression wasn't
   rewarded?" rather than telling them the species is not aggressive. Always probe
   before correcting.
+- TRANSFER PASS SIGNAL: When the student's transfer answer clearly and genuinely
+  demonstrates the core reasoning in the EXPECTED ANSWER — not merely a partial or
+  surface-level response — append the exact token [TRANSFER_PASSED] on its own line at
+  the very end of your response, after all other text. Do not include this token if the
+  answer is incomplete, vague, or still being probed. Include it at most once, the first
+  time the student's understanding is clearly confirmed. This token will be stripped
+  before display and will never be seen by the student.
 """
 
 # ──────────────────────────────────────────────

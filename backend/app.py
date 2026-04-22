@@ -7,6 +7,7 @@ from models import db, User
 from routes.groups import groups_bp
 from routes.chat import chat_bp
 from routes.auth import auth_bp
+from routes.progress import progress_bp
 
 app = Flask(__name__, static_folder="../frontend", static_url_path="")
 CORS(app, supports_credentials=True)
@@ -35,6 +36,7 @@ def unauthorized():
 app.register_blueprint(groups_bp)
 app.register_blueprint(chat_bp)
 app.register_blueprint(auth_bp)
+app.register_blueprint(progress_bp)
 
 with app.app_context():
     db.create_all()

@@ -27,3 +27,15 @@ class ChatMessage(db.Model):
     role = db.Column(db.String(20), nullable=False)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class TransferProgress(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    group_id = db.Column(db.String(100), nullable=False)
+    topic_id = db.Column(db.String(100), nullable=False)
+    passed = db.Column(db.Boolean, default=False, nullable=False)
+    passed_at = db.Column(db.DateTime, nullable=True)
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "group_id", "topic_id", name="uq_transfer_progress"),
+    )

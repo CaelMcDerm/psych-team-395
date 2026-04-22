@@ -36,7 +36,8 @@
   <nav id="tab-bar">
     <div id="user-bar" class="hidden">
       <span id="user-name"></span>
-      <button id="logout-btn">Logout</button>
+      <button id="progress-btn" title="View transfer task progress">Progress</button>
+      <button id="logout-btn" class="hidden">Logout</button>
     </div>
     <button id="login-btn" class="hidden">Login</button>
   </nav>
@@ -96,11 +97,24 @@
     </div>
   </div>
 
+  <!-- Progress Modal -->
+  <div id="progress-overlay" class="hidden">
+    <div id="progress-modal">
+      <div id="progress-modal-header">
+        <h2>Transfer Task Progress</h2>
+        <button id="progress-close-btn" title="Close">&times;</button>
+      </div>
+      <p id="progress-subtitle">Complete each simulation's transfer task to earn a checkmark.</p>
+      <div id="progress-list"></div>
+    </div>
+  </div>
+
   <script src="js/state.js"></script>
   <script src="js/controlPanel.js"></script>
   <script src="js/simulation.js"></script>
   <script src="js/chat.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/progress.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

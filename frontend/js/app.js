@@ -3,7 +3,8 @@
  */
 (async function boot() {
   // Wait for authentication before loading the app
-  await Auth.init();
+  const username = await Auth.init();
+  Progress.init(!!username);
 
   let groups;
   try {

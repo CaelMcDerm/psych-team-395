@@ -31,6 +31,7 @@ const Auth = (() => {
     document.getElementById('auth-overlay').classList.add('hidden');
     document.getElementById('login-btn').classList.add('hidden');
     document.getElementById('user-name').textContent = username;
+    document.getElementById('logout-btn').classList.remove('hidden');
     const tabBar = document.getElementById('tab-bar');
     const userBar = document.getElementById('user-bar');
     tabBar.appendChild(userBar);
@@ -40,7 +41,10 @@ const Auth = (() => {
   function _onGuest() {
     document.getElementById('auth-overlay').classList.add('hidden');
     const tabBar = document.getElementById('tab-bar');
+    const userBar = document.getElementById('user-bar');
     const loginBtn = document.getElementById('login-btn');
+    tabBar.appendChild(userBar);
+    userBar.classList.remove('hidden');
     tabBar.appendChild(loginBtn);
     loginBtn.classList.remove('hidden');
   }

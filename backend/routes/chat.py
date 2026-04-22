@@ -1,13 +1,36 @@
 import json
 import uuid
 import requests
+from datetime import datetime
 from flask import Blueprint, jsonify, request, session
 from flask_login import current_user
 
 import chat_manager
 import config
+from models import db, TransferProgress
 
 chat_bp = Blueprint("chat", __name__)
+
+TRANSFER_MARKER = "[TRANSFER_PASSED]"
+
+
+def _mark_transfer_passed(user_id: int, group_id: str, topic_id: str) -> None:
+    record = TransferProgress.query.filter_by(
+        user_id=user_id, group_id=group_id, topic_id=topic_id
+    ).first()
+    if not record:
+        record = TransferProgress(
+            user_id=user_id,
+            group_id=group_id,
+            topic_id=topic_id,
+            passed=True,
+            passed_at=datetime.utcnow(),
+        )
+        db.session.add(record)
+    elif not record.passed:
+        record.passed = True
+        record.passed_at = datetime.utcnow()
+    db.session.commit()
 
 
 def _get_ids():
@@ -101,8 +124,14 @@ def chat():
     except Exception as e:
         return jsonify({"error": str(e)}), 502
 
+    transfer_passed = TRANSFER_MARKER in reply
+    if transfer_passed:
+        reply = reply.replace(TRANSFER_MARKER, "").rstrip()
+        if user_id is not None:
+            _mark_transfer_passed(user_id, group_id, topic_id)
+
     chat_manager.append(user_id, group_id, topic_id, "assistant", reply, guest_id)
-    return jsonify({"reply": reply})
+    return jsonify({"reply": reply, "transfer_passed": transfer_passed and user_id is not None})
 
 
 @chat_bp.route("/api/chat/reset", methods=["POST"])
