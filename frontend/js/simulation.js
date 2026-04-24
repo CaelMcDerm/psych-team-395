@@ -8,6 +8,8 @@ const Simulation = (() => {
   let currentKey = null;
   let lastTime = 0;
   let audioCtx = null;
+  const graphMinimized = {};
+  let graphHitBox = null;
 
   const happyImg = new Image();
   happyImg.src = "/images/joyfulsoul.png";
@@ -29,6 +31,17 @@ const Simulation = (() => {
       const { key, controlKey } = e.detail;
       if (controlKey === "popSize" || controlKey === "groupSize" || controlKey === "predatorCount" || controlKey === "initialProsocial") resetPop(key);
     });
+
+    canvas.addEventListener("click", (e) => {
+      if (!graphHitBox) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const b = graphHitBox;
+      if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
+        graphMinimized[currentKey] = !graphMinimized[currentKey];
+      }
+    });
   }
 
   function resize() {
@@ -43,6 +56,24 @@ const Simulation = (() => {
 
   function cw() { return canvas.width / (window.devicePixelRatio || 1); }
   function ch() { return canvas.height / (window.devicePixelRatio || 1); }
+
+  function drawGraphToggleBtn(boxX, boxY, boxW) {
+    const btnSize = 14;
+    const btnX = boxX + boxW - btnSize - 4;
+    const btnY = boxY + 5;
+    ctx.fillStyle = "rgba(60,65,80,0.9)";
+    ctx.fillRect(btnX, btnY, btnSize, btnSize);
+    ctx.strokeStyle = "rgba(100,105,120,0.7)"; ctx.lineWidth = 0.5;
+    ctx.strokeRect(btnX, btnY, btnSize, btnSize);
+    ctx.fillStyle = "#b0b4c8";
+    ctx.font = "bold 12px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(graphMinimized[currentKey] ? "+" : "−", btnX + btnSize / 2, btnY + btnSize / 2);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+    graphHitBox = { x: btnX, y: btnY, w: btnSize, h: btnSize };
+  }
 
   function stop() {
     if (animId) { cancelAnimationFrame(animId); animId = null; }
@@ -482,30 +513,46 @@ const Simulation = (() => {
     const hist = pop.history;
 
     if (hist.length >= 2) {
-      const cWidth = 185, cHeight = 78, cxp = w - cWidth - 14, cyp = h - cHeight - 40;
-      ctx.fillStyle = "rgba(15,17,23,0.88)";
-      ctx.fillRect(cxp - 8, cyp - 18, cWidth + 16, cHeight + 26);
-      ctx.strokeStyle = "rgba(42,45,58,0.8)"; ctx.lineWidth = 0.5;
-      ctx.strokeRect(cxp - 8, cyp - 18, cWidth + 16, cHeight + 26);
-      ctx.font = "10px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
-      ctx.fillText("Aggression / generation", cxp, cyp - 5);
+      const cWidth = 185, cHeight = 78, cxp = w - cWidth - 14;
+      const cyp = h - cHeight - 88;
+      const boxX = cxp - 8, boxY = cyp - 24, boxW = cWidth + 16;
 
-      [{ k: "mean", c: "#378add" }, { k: "mMean", c: "#ef9f27" }, { k: "fMean", c: "#9FE1CB" }].forEach(({ k, c }) => {
-    ctx.beginPath();
-        hist.forEach((pt, i) => {
-          const x = cxp + (i / (hist.length - 1)) * cWidth;
-          const y = cyp + cHeight - pt[k] * cHeight;
-          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      if (graphMinimized[currentKey]) {
+        const minimizedY = h - 80;
+        ctx.fillStyle = "rgba(15,17,23,0.88)";
+        ctx.fillRect(boxX, minimizedY, boxW, 28);
+        ctx.strokeStyle = "rgba(42,45,58,0.8)"; ctx.lineWidth = 0.5;
+        ctx.strokeRect(boxX, minimizedY, boxW, 28);
+        ctx.font = "10px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+        ctx.fillText("Aggression / generation", cxp, minimizedY + 18);
+        drawGraphToggleBtn(boxX, minimizedY, boxW);
+      } else {
+        ctx.fillStyle = "rgba(15,17,23,0.88)";
+        ctx.fillRect(boxX, boxY, boxW, cHeight + 52);
+        ctx.strokeStyle = "rgba(42,45,58,0.8)"; ctx.lineWidth = 0.5;
+        ctx.strokeRect(boxX, boxY, boxW, cHeight + 52);
+        ctx.font = "10px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+        ctx.fillText("Aggression / generation", cxp, cyp - 6);
+        drawGraphToggleBtn(boxX, boxY, boxW);
+
+        [{ k: "mean", c: "#378add" }, { k: "mMean", c: "#ef9f27" }, { k: "fMean", c: "#9FE1CB" }].forEach(({ k, c }) => {
+          ctx.beginPath();
+          hist.forEach((pt, i) => {
+            const x = cxp + (i / (hist.length - 1)) * cWidth;
+            const y = cyp + cHeight - pt[k] * cHeight;
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          });
+          ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.stroke();
         });
-        ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.stroke();
-      });
 
-      [["All", "#378add"], ["Males", "#ef9f27"], ["Females", "#9FE1CB"]].forEach(([l, c], i) => {
-        const lx = cxp + i * 58;
-        ctx.fillStyle = c; ctx.beginPath(); ctx.arc(lx + 4, cyp + cHeight + 10, 3, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = "#8b8fa3"; ctx.font = "9px 'JetBrains Mono', monospace";
-        ctx.fillText(l, lx + 10, cyp + cHeight + 14);
-      });
+        [["All", "#378add"], ["Males", "#ef9f27"], ["Females", "#9FE1CB"]].forEach(([l, c], i) => {
+          const lx = cxp + i * 62;
+          const ly = cyp + cHeight + 18;
+          ctx.fillStyle = c; ctx.beginPath(); ctx.arc(lx + 4, ly, 3, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#8b8fa3"; ctx.font = "9px 'JetBrains Mono', monospace";
+          ctx.fillText(l, lx + 12, ly + 3);
+        });
+      }
     }
 
     ctx.fillStyle = "rgba(15,17,23,0.75)"; ctx.fillRect(0, 0, w, 32);
@@ -1271,16 +1318,34 @@ const Simulation = (() => {
     // Graph dimensions - bottom right
     const gW = 240, gH = 120;
     const gx = w - gW - 20, gy = h - gH - 100;
+    const boxX = gx - 12, boxY = gy - 24, boxW = gW + 24;
+
+    ctx.fillStyle = "rgba(15,17,23,0.92)";
+    ctx.strokeStyle = "rgba(42,45,58,0.8)"; ctx.lineWidth = 0.5;
+    ctx.font = "10px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+
+    if (graphMinimized[currentKey]) {
+      const minimizedY = h - 80;
+      ctx.fillStyle = "rgba(15,17,23,0.92)";
+      ctx.fillRect(boxX, minimizedY, boxW, 28);
+      ctx.strokeStyle = "rgba(42,45,58,0.8)"; ctx.lineWidth = 0.5;
+      ctx.strokeRect(boxX, minimizedY, boxW, 28);
+      ctx.font = "10px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+      ctx.fillText("Walnuts cracked / generation", gx, minimizedY + 18);
+      drawGraphToggleBtn(boxX, minimizedY, boxW);
+      return;
+    }
 
     // Background
     ctx.fillStyle = "rgba(15,17,23,0.92)";
-    ctx.fillRect(gx - 12, gy - 24, gW + 24, gH + 40);
+    ctx.fillRect(boxX, boxY, boxW, gH + 40);
     ctx.strokeStyle = "rgba(42,45,58,0.8)"; ctx.lineWidth = 0.5;
-    ctx.strokeRect(gx - 12, gy - 24, gW + 24, gH + 40);
+    ctx.strokeRect(boxX, boxY, boxW, gH + 40);
 
     // Title
     ctx.font = "10px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
     ctx.fillText("Walnuts cracked / generation", gx, gy - 10);
+    drawGraphToggleBtn(boxX, boxY, boxW);
 
     // Axes
     ctx.strokeStyle = "#2a2d3a"; ctx.lineWidth = 1;
@@ -1793,14 +1858,28 @@ const Simulation = (() => {
 
     const gW = 240, gH = 110;
     const gx = w - gW - 20, gy = h - gH - 100;
+    const boxX = gx - 12, boxY = gy - 24, boxW = gW + 24;
+
+    if (graphMinimized[currentKey]) {
+      const minimizedY = h - 80;
+      ctx.fillStyle = "rgba(15,17,23,0.92)";
+      ctx.fillRect(boxX, minimizedY, boxW, 28);
+      ctx.strokeStyle = "rgba(42,45,58,0.8)"; ctx.lineWidth = 0.5;
+      ctx.strokeRect(boxX, minimizedY, boxW, 28);
+      ctx.font = "10px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+      ctx.fillText("Prosocial % / generation", gx, minimizedY + 18);
+      drawGraphToggleBtn(boxX, minimizedY, boxW);
+      return;
+    }
 
     ctx.fillStyle = "rgba(15,17,23,0.92)";
-    ctx.fillRect(gx - 12, gy - 24, gW + 24, gH + 48);
+    ctx.fillRect(boxX, boxY, boxW, gH + 48);
     ctx.strokeStyle = "rgba(42,45,58,0.8)"; ctx.lineWidth = 0.5;
-    ctx.strokeRect(gx - 12, gy - 24, gW + 24, gH + 48);
+    ctx.strokeRect(boxX, boxY, boxW, gH + 48);
 
     ctx.font = "10px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
     ctx.fillText("Prosocial % / generation", gx, gy - 10);
+    drawGraphToggleBtn(boxX, boxY, boxW);
 
     // Axes
     ctx.strokeStyle = "#2a2d3a"; ctx.lineWidth = 1;
@@ -2094,14 +2173,28 @@ const Simulation = (() => {
 
     const gW = 220, gH = 90;
     const gx = w - gW - 20, gy = h - gH - 100;
+    const boxX = gx - 12, boxY = gy - 24, boxW = gW + 24;
+
+    if (graphMinimized[currentKey]) {
+      const minimizedY = h - 80;
+      ctx.fillStyle = "rgba(15,17,23,0.92)";
+      ctx.fillRect(boxX, minimizedY, boxW, 28);
+      ctx.strokeStyle = "rgba(42,45,58,0.8)"; ctx.lineWidth = 0.5;
+      ctx.strokeRect(boxX, minimizedY, boxW, 28);
+      ctx.font = "10px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+      ctx.fillText("Success rate / trial window", gx, minimizedY + 18);
+      drawGraphToggleBtn(boxX, minimizedY, boxW);
+      return;
+    }
 
     ctx.fillStyle = "rgba(15,17,23,0.92)";
-    ctx.fillRect(gx - 12, gy - 24, gW + 24, gH + 48);
+    ctx.fillRect(boxX, boxY, boxW, gH + 48);
     ctx.strokeStyle = "rgba(42,45,58,0.8)"; ctx.lineWidth = 0.5;
-    ctx.strokeRect(gx - 12, gy - 24, gW + 24, gH + 48);
+    ctx.strokeRect(boxX, boxY, boxW, gH + 48);
 
     ctx.font = "10px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
     ctx.fillText("Success rate / trial window", gx, gy - 10);
+    drawGraphToggleBtn(boxX, boxY, boxW);
 
     // Current stats
     const total = Math.max(pop.trial, 1);
@@ -2383,14 +2476,28 @@ const Simulation = (() => {
     const w = cw(), h = ch();
     const gW = 220, gH = 100;
     const gx = w - gW - 20, gy = h - gH - 100;
+    const boxX = gx - 12, boxY = gy - 24, boxW = gW + 24;
+
+    if (graphMinimized[currentKey]) {
+      const minimizedY = h - 80;
+      ctx.fillStyle = "rgba(15,17,23,0.92)";
+      ctx.fillRect(boxX, minimizedY, boxW, 28);
+      ctx.strokeStyle = "rgba(42,45,58,0.8)"; ctx.lineWidth = 0.5;
+      ctx.strokeRect(boxX, minimizedY, boxW, 28);
+      ctx.font = "10px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
+      ctx.fillText("Accuracy by condition", gx, minimizedY + 18);
+      drawGraphToggleBtn(boxX, minimizedY, boxW);
+      return;
+    }
 
     ctx.fillStyle = "rgba(15,17,23,0.92)";
-    ctx.fillRect(gx - 12, gy - 24, gW + 24, gH + 52);
+    ctx.fillRect(boxX, boxY, boxW, gH + 52);
     ctx.strokeStyle = "rgba(42,45,58,0.8)"; ctx.lineWidth = 0.5;
-    ctx.strokeRect(gx - 12, gy - 24, gW + 24, gH + 52);
+    ctx.strokeRect(boxX, boxY, boxW, gH + 52);
 
     ctx.font = "10px 'JetBrains Mono', monospace"; ctx.fillStyle = "#8b8fa3";
     ctx.fillText("Accuracy by condition", gx, gy - 10);
+    drawGraphToggleBtn(boxX, boxY, boxW);
 
     // Bar chart: facing vs turned away
     const barW = 70, barH = gH - 10;
