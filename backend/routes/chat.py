@@ -68,6 +68,7 @@ def call_local_api(history: list[dict], system_prompt: str) -> str:
         "model": config.LOCAL_MODEL,
         "messages": messages,
         "stream": True,
+        "think": False,
         "options": {
             "num_ctx": config.LOCAL_NUM_CTX,
             "num_predict": config.LOCAL_NUM_PREDICT,

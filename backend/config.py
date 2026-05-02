@@ -12,9 +12,9 @@ CLOUD_MODEL = "claude-sonnet-4-20250514"
 
 # Local config (e.g. Ollama)
 LOCAL_API_URL = os.getenv("LOCAL_API_URL", "http://localhost:11434/api/chat")
-LOCAL_MODEL = os.getenv("LOCAL_MODEL", "qwen3-vl:8b")
-LOCAL_NUM_CTX = int(os.getenv("LOCAL_NUM_CTX", "2048"))        # context window — lower = faster
-LOCAL_NUM_PREDICT = int(os.getenv("LOCAL_NUM_PREDICT", "512"))  # max output tokens
+LOCAL_MODEL = os.getenv("LOCAL_MODEL", "qwen3.5:9b")
+LOCAL_NUM_CTX = int(os.getenv("LOCAL_NUM_CTX", "4096"))        # context window — lower = faster
+LOCAL_NUM_PREDICT = int(os.getenv("LOCAL_NUM_PREDICT", "300"))  # max output tokens
 
 # Species groups — each group is a top-level tab
 SPECIES_GROUPS = [

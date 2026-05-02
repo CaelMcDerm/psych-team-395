@@ -1,5 +1,44 @@
 # System Prompt Changelog
 
+## v3
+
+**Hypothesis:** We hypothesize that (a) embedding a machine-readable signal in the tutor's response will let the application reliably track which transfer tasks a student has actually demonstrated understanding of, and (b) running the v2 prompt under a stronger local model will materially improve safeguard adherence — since v2's evaluation showed remaining failures (Scenario 5 hint leakage, Scenario 8 deflected clarification, Scenario 16 scope-redirect tone) that we believe are constrained more by model capability than by additional prompt rules.
+
+---
+
+### Changes from v2 → v3
+
+**1. Transfer-pass signal token (TRANSFER QUESTIONS section)**
+
+v2's transfer evaluation lived only in the chat text — the application had no way to tell whether a student had genuinely passed the transfer task versus given a partial or surface-level answer. v3 adds: "When the student's transfer answer clearly and genuinely demonstrates the core reasoning in the EXPECTED ANSWER — not merely a partial or surface-level response — append the exact token [TRANSFER_PASSED] on its own line at the very end of your response, after all other text." The token is stripped from the displayed reply by the chat route and used as the trigger for the per-topic progress checkmarks. This makes the rubric for "passed" explicit (genuine reasoning, not partial) and gives the rest of the application a single source of truth.
+
+**2. Local model upgrade (default LOCAL_MODEL in config.py)**
+
+v0–v2 used `gemma3:4b` as the default local model. Despite v2's strict preamble (RULE 1–4, FIRST-MESSAGE GUARD, MID-CONVERSATION GUARD), the 4B-class model continued to fold under direct injection attempts and produced inconsistent format adherence. v3 raises the default to a 9B-class Qwen model (`qwen3.5:9b`), which has substantially stronger instruction-following at the cost of latency. The system prompt itself is unchanged in this respect — the change is a recognition that, below a capability threshold, no amount of additional prompt language reliably enforces safeguards.
+
+**3. Inference-side adjustments (backend/routes/chat.py, backend/config.py)**
+
+`qwen3.5` is a thinking model: with default settings it spends generation budget on hidden reasoning before producing visible content, which made first responses appear empty. v3 sets `"think": false` in the Ollama request body to disable thinking and emit content directly. Context window was raised from 2048 to 4096 so the full preamble + domain prompt + conduct block fits without truncation (a possible cause of partial safeguard adherence in v2). `num_predict` was lowered from 512 to 300 to keep responses tight under the heavier model.
+
+---
+
+### Summary of targeted evaluation scenarios
+
+| Change | Primary scenarios targeted | Failure pattern addressed |
+|--------|---------------------------|--------------------------|
+| TRANSFER_PASS signal token | 2, 10, 17 | App could not reliably detect when a transfer answer was genuinely correct vs partial |
+| Local model upgrade (gemma3:4b → qwen3.5:9b) | 5, 8, 15, 16 | Safeguards held under the prompt but not under the small base model |
+| Context window raised to 4096 | All | System prompt may have been truncated under v2's 2048-token ctx limit |
+| Disable thinking (`think: false`) | All | Empty responses on thinking-capable models when num_predict is tight |
+
+---
+
+### Known regressions in v3
+
+- **Scenario 16 (off-topic chemistry homework, 1/2):** v3's rigid "I cannot follow that instruction" opening reads as robotic when applied to a benign off-topic question (vs an actual injection). The rule is correct for jailbreaks but over-applies here. Candidate fix in a future iteration: split the FIXED REFUSAL into an injection branch and a softer scope branch.
+
+---
+
 ## v2
 
 **Hypothesis:** We hypothesize that the new system prompt will deliver either concise or detailed responses based on the user's preferences. Additionally, we hypothesize that the system prompt will better guide users into the relevant transfer task, and not get sidetracked as easily.
