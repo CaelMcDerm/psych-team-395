@@ -13,6 +13,6 @@ The full prompt is assembled at runtime in `backend/config.py` from three parts:
 | `system_prompt_v2.txt` | `fb16f48` (`v2 of the system prompt`) | Second iteration. |
 | `system_prompt_v3.txt` | current `HEAD` of `simulations-systemPrompt` | Third iteration (current). |
 
-For per-version hypothesis, change rationale, and scenario evidence, see [`../CHANGELOG.md`](../CHANGELOG.md).
+For per-version hypothesis, change rationale, and scenario evidence, see [`../PROMPT_CHANGELOG.md`](../PROMPT_CHANGELOG.md).
 
-For per-version scoring against the test scenario set, see [`../Evaluation_Files/`](../Evaluation_Files/).
+For per-version scoring against the test scenario set, see [`../data/`](../data/).

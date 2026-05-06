@@ -122,8 +122,16 @@ def chat():
             reply = call_cloud_api(history, system_prompt)
         else:
             reply = call_local_api(history, system_prompt)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 502
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "Could not reach the AI service. If you are running locally, make sure Ollama is running."}), 502
+    except requests.exceptions.Timeout:
+        return jsonify({"error": "The AI service took too long to respond. Please try again."}), 504
+    except requests.exceptions.HTTPError as e:
+        if e.response is not None and e.response.status_code == 429:
+            return jsonify({"error": "The AI service is rate-limited. Please wait a moment and try again."}), 429
+        return jsonify({"error": "The AI service returned an unexpected error. Please try again."}), 502
+    except Exception:
+        return jsonify({"error": "An unexpected error occurred. Please try again."}), 502
 
     transfer_passed = TRANSFER_MARKER in reply
     if transfer_passed:
