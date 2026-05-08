@@ -1,0 +1,25 @@
+Hosting Architecture:
+The usage of Docker on Fly.io allows an efficient way to host a simulation and chatbot used in the classroom and to help students understand concepts relating to evolutionary psychology. It supports auto-scaling and low-latency global deployments. More specifically, usage will spike during class time or when assignments are due. Fly.io handles these bursts automatically by spinning up more instances when traffic increases and scaling back down when it's not in usage, which means we're not overpaying for idle servers. The chatbot will need to remember what was said throughout a conversation to help transfer concepts from one animal to another, which means that we can't use a stateless serverless architecture without adding extra elements for the user to pick up where they left off. 
+
+Frontend: Served as static files (HTML/CSS/JS) via Flask 
+Backend: Flask API containerized with Docker
+Hosting: Fly.io 
+Database: Managed PostgreSQL for storing user sessions and logs
+
+Model Choice at Scale:
+In production the model choice at use would be Claude Haiku 3.5. Its cost and capability make it efficient for a project of this manner. Priced at roughly $0.08–$0.15 per 1M input tokens, it costs a fraction of flagship models and has enough capability to ensure that the chatbot can perform well in tutoring style interactions. Cloud models significantly outperform small local models in reasoning and cross-domain transfer which ties closely to the chatbot’s goal and purpose. The chatbot does not require a model that should support more complicated tasks, given that it is supposed to help explain animal behaviour and patterns to help students draw connections on their own, so a smaller and cheaper model like Claude Haiku 3.5 will be able to handle such tasks. The latency of this model is sub-second to around a 2-second response time, which is appropriate for interactive tutoring. Anthropic offers options where student conversations will never be stored or used for training which is valuable in an educational setting for maintaining data privacy.  
+
+Data Privacy: 
+Student information will be stored as minimally as possible, and the information that is stored will be protected. Information will be stored in a managed PostgreSQL database. Student names will not be stored or attached to conversations but instead to a session ID. There will be limited access to who can view logs such as instructors and platform admins, but not other students or unauthorized individuals. There will be a short retention period of 90 days. All data will be encrypted when it’s sent over the internet and stored. In a K-12 context, given that essentially all students are underage, the privacy aspect would change because of consent. Underage students would be required to receive parental consent through COPPA and FERPA before any data is collected. The identity and information collected from K-12 students becomes more protected and will not be used to train future models. In a higher education context, FERPA still applies but there is more flexibility. Retention can be extended to an academic semester or quarter, but with student consent they can opt into having their information stored for longer as it can be used for research with the proper consent. 
+
+Cost Model: 
+Assuming an average conversation between the student and chatbot involves about 8 back and forth messages, each message uses roughly 300 input tokens and 200 output tokens which will result in about 4,000 tokens per session. If you have 1,000 users daily, it would cost around $0.25 per month. The ceiling because this becomes unsustainable is when we reach the tens of thousands of daily users 
+
+ Users(active daily)    Monthly Sessions    Input Cost      Output Cost     Total/Month
+100 students                ~3,000           ~$5.76         ~$19.20             ~$25
+1,000 students              ~30,000          ~$57.60        ~$192.00            ~$250
+10,000 students             ~300,000         ~$576.00       ~$1,920.00          ~$2,496
+
+
+Failure Modes: 
+When the LLM API is down the chatbot will stop working but the simulations should still be functioning normally because it does not depend on the AI. In this case, the chatbot would communicate that it is down by displaying a message saying such. To minimize giving incorrect answers to students, the chatbot is given a focused system prompt that keeps it on topic. Additionally, it will be stated that students should verify course material and content with their instructor and that the chat is there to help but might make mistakes. For in-classroom use, ideally the chatbot would be connected to the actual course content and readings so that the answers are verified through the book rather than general data and facts. In the case that a student types something harmful or off-topic, anthropics built in safety filters will catch the most harmful content automatically. The flagged messages would ideally be logged for the instructor to view anonymously, since no personal information about students is stored. 

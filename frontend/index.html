@@ -13,8 +13,35 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
+  <!-- Auth Modal Overlay -->
+  <div id="auth-overlay">
+    <div id="auth-modal">
+      <h1>Simulation Dashboard</h1>
+      <p>Sign in to save your chat history across sessions.</p>
+      <div id="auth-tabs">
+        <button class="auth-tab active" data-tab="login">Login</button>
+        <button class="auth-tab" data-tab="register">Register</button>
+      </div>
+      <form id="auth-form" autocomplete="on">
+        <input type="text" id="auth-username" placeholder="Username" autocomplete="username" />
+        <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password" />
+        <div id="auth-error"></div>
+        <button type="submit" id="auth-submit">Login</button>
+      </form>
+      <button type="button" id="auth-guest-btn">Continue as Guest</button>
+    </div>
+  </div>
+
   <!-- Top Tab Bar (species groups) -->
-  <nav id="tab-bar"></nav>
+  <nav id="tab-bar">
+    <div id="user-bar" class="hidden">
+      <span id="user-name"></span>
+      <button id="progress-btn" title="View transfer task progress">Progress</button>
+      <button id="tutorial-btn" title="Replay the tutorial">Tutorial</button>
+      <button id="logout-btn" class="hidden">Logout</button>
+    </div>
+    <button id="login-btn" class="hidden">Login</button>
+  </nav>
 
   <!-- Sub-nav: topic pills + species toggle -->
   <div id="sub-nav">
@@ -50,7 +77,12 @@
     <div id="chat-header">
       <span id="chat-toggle-label">Chat</span>
       <span id="chat-chevron">&#9650;</span>
-      <button id="chat-reset-btn" title="Reset chat">Reset</button>
+      <span id="response-mode-label">Response style:</span>
+      <div id="response-mode-toggle" role="group" aria-label="Response style">
+        <button class="mode-btn active" data-mode="concise" title="Short, focused answers — best for quick exploration">Concise</button>
+        <button class="mode-btn" data-mode="detailed" title="Longer, in-depth explanations — best for deeper understanding">Detailed</button>
+      </div>
+      <button id="chat-reset-btn" title="Reset chat">Reset Chat</button>
     </div>
     <div id="chat-body">
       <div id="chat-messages"></div>
@@ -66,10 +98,40 @@
     </div>
   </div>
 
+  <!-- Tutorial -->
+  <div id="tutorial-overlay" class="hidden"></div>
+  <div id="tutorial-card" class="hidden">
+    <div id="tutorial-header">
+      <span id="tutorial-step-indicator"></span>
+      <button id="tutorial-skip-btn">Skip tour</button>
+    </div>
+    <h3 id="tutorial-title"></h3>
+    <p id="tutorial-body"></p>
+    <div id="tutorial-footer">
+      <button id="tutorial-back-btn">Back</button>
+      <button id="tutorial-next-btn">Next</button>
+    </div>
+  </div>
+
+  <!-- Progress Modal -->
+  <div id="progress-overlay" class="hidden">
+    <div id="progress-modal">
+      <div id="progress-modal-header">
+        <h2>Transfer Task Progress</h2>
+        <button id="progress-close-btn" title="Close">&times;</button>
+      </div>
+      <p id="progress-subtitle">Complete each simulation's transfer task to earn a checkmark.</p>
+      <div id="progress-list"></div>
+    </div>
+  </div>
+
   <script src="js/state.js"></script>
   <script src="js/controlPanel.js"></script>
   <script src="js/simulation.js"></script>
   <script src="js/chat.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/progress.js"></script>
+  <script src="js/tutorial.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

@@ -7,7 +7,8 @@ const AppState = (() => {
   let activeTopic = null;
   let activeSpecies = null;
   let groups = [];
-  const store = {}; // "group:topic:species" -> {controls, chatHistory, simState}
+  const store = {}; // "group:topic:species" -> {controls, simState}
+  const chatStore = {}; // "group:topic" -> [{role, content}]
 
   function stateKey(g, t, s) {
     return `${g || activeGroup}:${t || activeTopic}:${s || activeSpecies}`;
@@ -32,6 +33,28 @@ const AppState = (() => {
     "dogs_wolves:gaze_following:wolves": [
       { key: "targetDistance", label: "Target Distance",    min: 0.0, max: 1.0, step: 0.05, default: 0.7 },
       { key: "trialSpeed",     label: "Trial Speed",        min: 0.5, max: 2.0, step: 0.1,  default: 1.0 },
+    ],
+    "chimps_bonobos:culture:normative_conformity": [
+      { key: "groupSize",     label: "Group Size",          min: 3,   max: 12,  step: 1,    default: 6   },
+      { key: "genSpeed",      label: "Generation Speed",    min: 0.5, max: 3.0, step: 0.25, default: 1.0 },
+    ],
+    "chimps_bonobos:culture:cumulative_culture": [
+      { key: "groupSize",     label: "Group Size",          min: 3,   max: 12,  step: 1,    default: 6   },
+      { key: "genSpeed",      label: "Generation Speed",    min: 0.5, max: 3.0, step: 0.25, default: 1.0 },
+      { key: "innovationRate", label: "Innovation Rate",    min: 0.05, max: 0.5, step: 0.05, default: 0.15 },
+    ],
+    "humans:self_domestication:humans": [
+      { key: "popSize",       label: "Population",          min: 16,  max: 60,  step: 2,    default: 30  },
+      { key: "predatorCount", label: "Predator Count",      min: 1,   max: 8,   step: 1,    default: 3   },
+      { key: "mutRate",       label: "Mutation Rate",        min: 0.01, max: 0.15, step: 0.01, default: 0.05 },
+      { key: "initialProsocial", label: "Initial Prosocial %", min: 0.2, max: 0.8, step: 0.05, default: 0.5 },
+    ],
+    "elephants:theory_of_mind:cooperative_pulling": [
+      { key: "trialSpeed",    label: "Trial Speed",        min: 0.5, max: 3.0, step: 0.25, default: 1.0 },
+      { key: "waitTolerance", label: "Wait Tolerance",     min: 0.5, max: 5.0, step: 0.25, default: 2.5 },
+    ],
+    "elephants:theory_of_mind:human_pointing": [
+      { key: "trialSpeed",    label: "Trial Speed",        min: 0.5, max: 3.0, step: 0.25, default: 1.0 },
     ],
   };
 
@@ -80,12 +103,105 @@ const AppState = (() => {
 <p class="citation"><small>Miklósi, Á., Kubinyi, E., Topál, J., Gácsi, M., Virányi, Z., &amp; Csányi, V. (2003). A simple reason for a big difference: Wolves do not look back at humans, but dogs do. <em>Current Biology, 13</em>(9), 763–766.</small></p>`,
   };
 
+  // Culture info texts
+  infoTexts["chimps_bonobos:culture:normative_conformity"] = `<p><strong>Normative Conformity</strong> — Vervet monkeys learn to crack walnuts by observing others. Once a technique is acquired, it is transmitted faithfully across generations <strong>without improvement</strong>.</p>
+<p>Each generation cracks roughly the <strong>same number</strong> of walnuts as the one before. Monkeys imitate because they see the behavior, not because they have a concept of cultural norms — but the effect mimics conformity.</p>
+<p>Watch the graph: walnut output stays <strong>flat</strong> across generations. This is what real nonhuman primate cultural transmission looks like.</p>
+<div class="legend-block">
+  <div class="legend-row"><span class="dot" style="background:#8B6914"></span> Whole walnut (uncracked)</div>
+  <div class="legend-row"><span class="dot" style="background:#6b4f2a"></span> Cracked walnut (split open)</div>
+  <div class="legend-row"><span class="dot" style="background:#9FE1CB"></span> Walnuts cracked / generation (graph)</div>
+  <div class="legend-row"><span class="dot" style="background:#8b8fa3"></span> Technique skill (graph, flat)</div>
+</div>`;
+
+  infoTexts["chimps_bonobos:culture:cumulative_culture"] = `<p><strong>Cumulative Culture</strong> — A hypothetical scenario: what if vervet monkeys <em>could</em> build on previous generations' innovations?</p>
+<p>In this simulation, each generation improves on the walnut-cracking technique inherited from the last. Over time, efficiency <strong>increases</strong> and more walnuts are cracked per generation — a cultural ratchet effect.</p>
+<p>This is what nonhuman primates do <strong>NOT</strong> actually do. Cumulative culture requires high-fidelity imitation, teaching, and intentional innovation — capacities associated with human cultural evolution, not nonhuman primates.</p>
+<p>Watch the graph: walnut output <strong>climbs</strong> across generations, illustrating the ratchet effect absent in real primate populations.</p>
+<div class="legend-block">
+  <div class="legend-row"><span class="dot" style="background:#8B6914"></span> Whole walnut (uncracked)</div>
+  <div class="legend-row"><span class="dot" style="background:#6b4f2a"></span> Cracked walnut (split open)</div>
+  <div class="legend-row"><span class="dot" style="background:#ef9f27"></span> Walnuts cracked / generation (graph)</div>
+  <div class="legend-row"><span class="dot" style="background:#378add"></span> Technique skill (graph, rising)</div>
+</div>`;
+
+  // Self-domestication info text
+  infoTexts["humans:self_domestication:humans"] = `<p><strong>Self-Domestication Hypothesis</strong> — Humans may have undergone "domestication syndrome" without intentional breeding: selection for tolerance and reduced aggression led to behavioral, morphological, and cognitive changes.</p>
+<p><strong>Prosocial</strong> humans (green) form cooperative groups, sharing resources and gaining protection from predators. <strong>Aggressive</strong> humans (red) are rejected from groups and remain alone.</p>
+<p>Predators (dark shapes) target lone individuals with a <strong>75% success rate</strong>, but cannot take down groups. Over generations, prosocial humans survive more and pass on their traits — the population self-domesticates.</p>
+<p style="margin-top:0.75rem; padding:0.5rem 0.75rem; background:rgba(59,130,246,0.1); border-left:2px solid var(--accent); border-radius:3px; font-size:0.8125rem;"><strong>Tip:</strong> Explore <em>Nonhuman Primates → Aggression</em> first to see how aggression and mate choice interact in chimpanzees and bonobos — it provides useful context for this simulation.</p>
+<div class="legend-block">
+  <div class="legend-row"><span class="dot" style="background:#4ade80"></span> Prosocial human</div>
+  <div class="legend-row"><span class="dot" style="background:#ef4444"></span> Aggressive human</div>
+  <div class="legend-row"><span class="dot" style="background:#1e1e2e; border:2px solid #e24b4a"></span> Predator</div>
+  <div class="legend-row"><span class="dot" style="background:rgba(74,222,128,0.2); border:1.5px dashed #4ade80"></span> Cooperative group</div>
+</div>`;
+
+  // Elephant info texts
+  infoTexts["elephants:theory_of_mind:cooperative_pulling"] = `<p><strong>Cooperative Rope Pulling</strong> — Two elephants must simultaneously pull both ends of a rope threaded through a sliding platform to bring a food reward within reach.</p>
+<p>If only one elephant pulls, the rope <strong>slips through</strong> and the trial fails. Elephants learn that a <em>partner is needed</em> — they wait for the second elephant to arrive before pulling, demonstrating goal-directed cooperation and an understanding of the partner's role.</p>
+<p>The <em>Wait Tolerance</em> slider controls how long the first elephant waits for the partner. Higher tolerance → more patience → higher success rate.</p>
+<p>This task demonstrates coalitions, alliances, and cooperative problem-solving — key components of elephant social cognition that parallel abilities seen in great apes.</p>
+<div class="legend-block">
+  <div class="legend-row"><span class="dot" style="background:#9ca3af"></span> Elephant</div>
+  <div class="legend-row"><span class="dot" style="background:#ef9f27"></span> Rope</div>
+  <div class="legend-row"><span class="dot" style="background:#4ade80"></span> Food reward</div>
+  <div class="legend-row"><span class="dot" style="background:#378add"></span> Success indicator</div>
+  <div class="legend-row"><span class="dot" style="background:#e24b4a"></span> Failure indicator</div>
+</div>`;
+
+  infoTexts["elephants:theory_of_mind:human_pointing"] = `<p><strong>Human Pointing Comprehension</strong> — A human experimenter points at one of two containers, one of which holds food. The elephant must use the pointing cue to choose the correct container.</p>
+<p>The simulation alternates between two conditions:</p>
+<p><strong>Facing:</strong> The human faces the elephant and points — elephants tend to approach the indicated container, suggesting sensitivity to communicative intent.</p>
+<p><strong>Turned away:</strong> The human faces away while pointing — elephants engage in fewer approach behaviors, suggesting they attend to the human's <em>attentional state</em>, not just the arm gesture.</p>
+<p style="margin-top:0.75rem; padding:0.5rem 0.75rem; background:rgba(239,159,39,0.1); border-left:2px solid #ef9f27; border-radius:3px; font-size:0.8125rem;"><strong>Note:</strong> Results are mixed. Some studies with African elephants found pointing comprehension, while others with Asian elephants did not — possibly reflecting methodological or species differences. There is currently <strong>no direct evidence</strong> for elephants' capacity to understand others' knowledge or beliefs, as no false-belief tests have been conducted.</p>
+<div class="legend-block">
+  <div class="legend-row"><span class="dot" style="background:#9ca3af"></span> Elephant</div>
+  <div class="legend-row"><span class="dot" style="background:#c8ccd8"></span> Human experimenter</div>
+  <div class="legend-row"><span class="dot" style="background:#ef9f27"></span> Pointing gesture</div>
+  <div class="legend-row"><span class="dot" style="background:#4ade80"></span> Correct choice</div>
+  <div class="legend-row"><span class="dot" style="background:#e24b4a"></span> Incorrect / no response</div>
+</div>`;
+
+  // Predefined greeting messages keyed by "group:topic".
+  // Shown instantly as a display-only bubble when a chat session is empty.
+  // These are never stored in chat history and are never sent to the model.
+  const greetingMessages = {
+    "chimps_bonobos:aggression":
+      "Welcome! In this simulation you'll explore how aggression evolves differently in chimpanzees and bonobos depending on who controls mate selection. Once you've had a chance to explore both species, I'll ask you to apply what you've learned to predict the social behavior of a different animal. Feel free to ask me anything about what you're seeing.",
+
+    "chimps_bonobos:culture":
+      "Welcome! This simulation lets you compare two types of cultural transmission in vervet monkeys — one that mirrors what real primates do, and one that they don't. Once you understand the difference, I'll ask you to think about how this applies to a different species. Ask me anything as you explore.",
+
+    "dogs_wolves:gaze_following":
+      "Welcome! Here you'll investigate how domestication shaped the way dogs and wolves attend to human social cues — a difference that turns out to be genetic, not learned. After you've explored both species, I'll pose a question asking you to apply these ideas to a different animal. Ask away whenever you're curious.",
+
+    "humans:self_domestication":
+      "Welcome! This simulation models the self-domestication hypothesis — how selection for prosociality could have driven domestication-like changes in humans without any intentional breeding. Once you've explored the dynamics at play, I'll ask you to connect what you've learned to another species' origins. Ask me anything as you go.",
+
+    "elephants:theory_of_mind":
+      "Welcome! You'll be exploring two simulations that test different aspects of elephant social cognition — cooperative problem-solving and sensitivity to human communicative intent. After you've worked through both, I'll ask you to predict something about the social minds of a different species. Jump in and ask me anything you're wondering about.",
+  };
+
+  // Animal photos shown in info panel, keyed by "group:topic:species"
+  const animalImages = {
+    "chimps_bonobos:aggression:chimpanzees":           "images/animals/chimpanzee.jpg",
+    "chimps_bonobos:aggression:bonobos":               "images/animals/bonobo.jpg",
+    "dogs_wolves:gaze_following:dogs":                 "images/animals/dog.jpg",
+    "dogs_wolves:gaze_following:wolves":               "images/animals/wolf.jpg",
+    "chimps_bonobos:culture:normative_conformity":     "images/animals/vervet.jpg",
+    "chimps_bonobos:culture:cumulative_culture":       "images/animals/vervet.jpg",
+    "humans:self_domestication:humans":                "images/animals/human.jpg",
+    "elephants:theory_of_mind:cooperative_pulling":    "images/animals/elephant.jpg",
+    "elephants:theory_of_mind:human_pointing":         "images/animals/elephant.jpg",
+  };
+
   function initState(key) {
     if (store[key]) return;
     const cfg = controlConfigs[key] || [];
     const controls = {};
     cfg.forEach(c => { controls[c.key] = c.default; });
-    store[key] = { controls, chatHistory: [], simState: {} };
+    store[key] = { controls, simState: {} };
   }
 
   return {
@@ -101,8 +217,13 @@ const AppState = (() => {
     /** Current composite key */
     get activeKey() { return stateKey(); },
 
+    /** Chat key (shared across species within a topic) */
+    get chatKey() { return `${activeGroup}:${activeTopic}`; },
+
     getControlConfigs(key) { return controlConfigs[key || stateKey()] || []; },
     getInfoText(key) { return infoTexts[key || stateKey()] || "<p>No information available.</p>"; },
+    getAnimalImage(key) { return animalImages[key || stateKey()] || null; },
+    getGreeting(key) { return greetingMessages[key] || null; },
 
     getState(key) {
       const k = key || stateKey();
@@ -117,21 +238,17 @@ const AppState = (() => {
     },
 
     getChatHistory(key) {
-      const k = key || stateKey();
-      initState(k);
-      return store[k].chatHistory;
+      if (!chatStore[key]) chatStore[key] = [];
+      return chatStore[key];
     },
 
     appendChat(key, role, content) {
-      const k = key || stateKey();
-      initState(k);
-      store[k].chatHistory.push({ role, content });
+      if (!chatStore[key]) chatStore[key] = [];
+      chatStore[key].push({ role, content });
     },
 
     clearChat(key) {
-      const k = key || stateKey();
-      initState(k);
-      store[k].chatHistory = [];
+      chatStore[key] = [];
     },
   };
 })();

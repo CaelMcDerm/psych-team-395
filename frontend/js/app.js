@@ -2,22 +2,63 @@
  * Boot: build tabs (groups), sub-nav (topic pills + species toggle), wire switching.
  */
 (async function boot() {
+  // Wait for authentication before loading the app
+  const authResult = await Auth.init();
+  const username = authResult && authResult.username;
+  Progress.init(!!username);
+  Tutorial.init(authResult || { username: null, tutorialSeen: null });
+
   let groups;
   try {
-    const resp = await fetch("/api/groups");
+    const resp = await fetch("/api/groups", { credentials: "include" });
     groups = await resp.json();
   } catch {
     // Fallback when backend isn't running
     groups = [
       {
         id: "chimps_bonobos",
-        label: "Chimpanzees & Bonobos",
+        label: "Nonhuman Primates",
         species: [
           { id: "chimpanzees", label: "Chimpanzees" },
           { id: "bonobos", label: "Bonobos" },
         ],
         topics: [
           { id: "aggression", label: "Aggression" },
+          {
+            id: "culture",
+            label: "Culture",
+            species: [
+              { id: "normative_conformity", label: "Normative Conformity" },
+              { id: "cumulative_culture", label: "Cumulative Culture" },
+            ],
+          },
+        ],
+      },
+      {
+        id: "humans",
+        label: "Humans",
+        species: [
+          { id: "humans", label: "Humans" },
+        ],
+        topics: [
+          { id: "self_domestication", label: "Self-Domestication" },
+        ],
+      },
+      {
+        id: "elephants",
+        label: "Elephants",
+        species: [
+          { id: "elephants", label: "Elephants" },
+        ],
+        topics: [
+          {
+            id: "theory_of_mind",
+            label: "Theory of Mind",
+            species: [
+              { id: "cooperative_pulling", label: "Cooperative Pulling" },
+              { id: "human_pointing", label: "Human Pointing" },
+            ],
+          },
         ],
       },
     ];
@@ -43,6 +84,12 @@
   switchGroup(groups[0].id);
 })();
 
+/** Get the species list for a given topic (topic-level override or group default) */
+function getSpeciesForTopic(group, topicId) {
+  const topic = group.topics.find(t => t.id === topicId);
+  return (topic && topic.species) || group.species;
+}
+
 /** Switch the top-level group tab */
 function switchGroup(groupId) {
   const group = AppState.groups.find(g => g.id === groupId);
@@ -58,21 +105,28 @@ function switchGroup(groupId) {
   // Render topic pills
   renderTopicPills(group);
 
-  // Render species toggle
-  renderSpeciesToggle(group);
-
-  // Activate first topic + first species
-  AppState.activeTopic = group.topics[0].id;
-  AppState.activeSpecies = group.species[0].id;
-  highlightTopicPill(group.topics[0].id);
-  highlightSpeciesBtn(group.species[0].id);
+  // Activate first topic + its species
+  const firstTopic = group.topics[0];
+  AppState.activeTopic = firstTopic.id;
+  const speciesList = getSpeciesForTopic(group, firstTopic.id);
+  renderSpeciesToggle(speciesList);
+  AppState.activeSpecies = speciesList[0].id;
+  highlightTopicPill(firstTopic.id);
+  highlightSpeciesBtn(speciesList[0].id);
   activateCurrent();
 }
 
 /** Switch the topic within the current group */
 function switchTopic(topicId) {
+  const group = AppState.groups.find(g => g.id === AppState.activeGroup);
   AppState.activeTopic = topicId;
   highlightTopicPill(topicId);
+
+  // Re-render species toggle for this topic
+  const speciesList = getSpeciesForTopic(group, topicId);
+  renderSpeciesToggle(speciesList);
+  AppState.activeSpecies = speciesList[0].id;
+  highlightSpeciesBtn(speciesList[0].id);
   activateCurrent();
 }
 
@@ -87,9 +141,30 @@ function switchSpecies(speciesId) {
 function activateCurrent() {
   const key = AppState.activeKey;
   ControlPanel.render();
-  document.getElementById("info-content").innerHTML = AppState.getInfoText(key);
+
+  const infoContent = document.getElementById("info-content");
+  infoContent.innerHTML = AppState.getInfoText(key);
+
+  const imgPath = AppState.getAnimalImage(key);
+  if (imgPath) {
+    const wrap = document.createElement("div");
+    wrap.className = "species-photo-wrap";
+    const img = document.createElement("img");
+    img.className = "species-photo";
+    img.src = imgPath;
+    img.alt = "";
+    img.onerror = () => wrap.remove();
+    wrap.appendChild(img);
+    const legend = infoContent.querySelector(".legend-block");
+    if (legend) {
+      infoContent.insertBefore(wrap, legend);
+    } else {
+      infoContent.appendChild(wrap);
+    }
+  }
+
   Simulation.start(key);
-  Chat.renderHistory();
+  Chat.loadHistory();
 }
 
 // === Sub-nav rendering ===
@@ -114,7 +189,7 @@ function renderTopicPills(group) {
   });
 }
 
-function renderSpeciesToggle(group) {
+function renderSpeciesToggle(speciesList) {
   const container = document.getElementById("species-toggle");
   container.innerHTML = "";
 
@@ -127,7 +202,7 @@ function renderSpeciesToggle(group) {
   const toggleWrap = document.createElement("div");
   toggleWrap.className = "species-toggle-wrap";
 
-  group.species.forEach(sp => {
+  speciesList.forEach(sp => {
     const btn = document.createElement("button");
     btn.className = "species-btn";
     btn.dataset.speciesId = sp.id;
